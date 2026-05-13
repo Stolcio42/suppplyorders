@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>История заказов</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #f8f5f0;
+            color: #4a4a4a;
+            padding: 2rem;
+            max-width: 800px;
+            margin: auto;
+        }
+        h1 {
+            color: #2f3e34;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #deb887;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #c8a27a;
+        }
+        .btn-danger {
+            background: #e4a0a0;
+            color: #a34545;
+        }
+        .btn-danger:hover {
+            background: #d48383;
+            color: white;
+        }
+        .order {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1rem 0.5rem 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .order-date {
+            font-weight: 600;
+            color: #6ca6a0;
+        }
+        .order-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .delete-order-btn {
+            background: #f4c6c6;
+            border: none;
+            color: #a34545;
+            padding: 0.2rem 0.6rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .delete-order-btn:hover {
+            background: #e4a0a0;
+            color: white;
+        }
+        .supplier-block {
+            margin-left: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .supplier-name {
+            font-weight: 600;
+            background: #d9cbb8;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 0.3rem;
+        }
+        ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+        li {
+            margin: 0.2rem 0;
+        }
+        .empty {
+            color: #888;
+        }
+        .back-link {
+            margin-bottom: 1rem;
+            background: #b4d3c4;
+            color: #2f3e34;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Назад к заявкам</a>
+    <h1>
+        📋 История заказов
+        <button id="clear-history-btn" class="btn btn-danger">🗑 Очистить историю</button>
+    </h1>
+    <div id="history-container">Загрузка...</div>
+
+    <script>
+        function loadHistory() {
+            const container = document.getElementById('history-container');
+            const history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+            if (history.length === 0) {
+                container.innerHTML = '<p class="empty">Заказов пока нет.</p>';
+                return;
+            }
+
+            let html = '';
+            // новые сверху
+            history.slice().reverse().forEach(order => {
+                const date = new Date(order.date).toLocaleString('ru-RU');
+                html += `<div class="order">
+                    <div class="order-header">
+                        <span class="order-date">${date}</span>
+                        <div class="order-actions">
+                            <button class="delete-order-btn" data-id="${order.id}">Удалить</button>
+                        </div>
+                    </div>`;
+                for (const [supplierId, items] of Object.entries(order.cart)) {
+                    const supplierName = items[0]?.supplierName || 'Поставщик';
+                    html += `<div class="supplier-block">
+                        <span class="supplier-name">${supplierName}</span>
+                        <ul>`;
+                    items.forEach(item => {
+                        html += `<li>${item.name} x ${item.qty}`;
+                        if (item.article) html += ` (арт. ${item.article})`;
+                        if (item.price) html += ` — ${item.price.toFixed(2)} руб./шт.`;
+                        html += `</li>`;
+                    });
+                    html += `</ul></div>`;
+                }
+                html += `</div>`;
+            });
+            container.innerHTML = html;
+
+            // Навешиваем обработчики на кнопки удаления
+            document.querySelectorAll('.delete-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-id');
+                    deleteOrderById(orderId);
+                });
+            });
+        }
+
+        function deleteOrderById(orderId) {
+            if (!confirm('Удалить этот заказ?')) return;
+            let history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+            history = history.filter(order => order.id !== orderId);
+            localStorage.setItem('orderHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function clearHistory() {
+            if (confirm('Вы уверены, что хотите удалить всю историю заказов?')) {
+                localStorage.removeItem('orderHistory');
+                loadHistory();
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+            document.getElementById('clear-history-btn').addEventListener('click', clearHistory);
+        });
+    </script>
+</body>
+</html>
