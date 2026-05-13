@@ -95,6 +95,9 @@ function renderProducts(supplierId) {
         productListEl.innerHTML = '<p>Поставщик не найден</p>';
         return;
     }
+  
+    productListEl.classList.remove('welcome-message');
+
     if (!supplier.products || supplier.products.length === 0) {
         productListEl.innerHTML = '<p>Нет товаров</p>';
         return;
