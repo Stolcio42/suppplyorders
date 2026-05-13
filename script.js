@@ -95,18 +95,24 @@ function renderProducts(supplierId) {
         productListEl.innerHTML = '<p>Поставщик не найден</p>';
         return;
     }
-  
-    productListEl.classList.remove('welcome-message');
-
     if (!supplier.products || supplier.products.length === 0) {
         productListEl.innerHTML = '<p>Нет товаров</p>';
         return;
     }
+    
+    productListEl.classList.remove('welcome-message');
 
     let html = '';
     supplier.products.forEach(prod => {
+        const imgSrc = prod.image ? escapeHtml(prod.image) : null;
         html += `
             <div class="product-card">
+                <div class="product-image">
+                    ${imgSrc 
+                        ? `<img src="${imgSrc}" alt="${escapeHtml(prod.name)}" loading="lazy" onerror="this.style.display='none'">`
+                        : `<div class="no-image">📷</div>`
+                    }
+                </div>
                 <div class="info">
                     <div class="name">${escapeHtml(prod.name)}</div>
                     ${prod.article ? `<div class="article">Арт. ${escapeHtml(prod.article)}</div>` : ''}

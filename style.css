@@ -535,3 +535,31 @@ aside {
     text-align: center;
     font-style: italic;
 }
+/* Фото товара */
+.product-image {
+    width: 100%;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0ebe1;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    font-size: 2.5rem;
+    color: #b7a99a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
