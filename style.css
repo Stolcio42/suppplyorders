@@ -563,3 +563,63 @@ aside {
     width: 100%;
     height: 100%;
 }
+/* Поисковая строка */
+.search-box {
+    position: relative;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+#search-input {
+    width: 100%;
+    padding: 0.6rem 2.2rem 0.6rem 0.8rem;
+    border: 1px solid #d9cfbe;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: white;
+    color: #4a4a4a;
+    transition: border-color 0.2s;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #b4d3c4;
+    box-shadow: 0 0 0 3px rgba(180, 211, 196, 0.3);
+}
+
+#search-input:disabled {
+    background: #f0ede5;
+    cursor: not-allowed;
+    color: #999;
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 6px;
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #8b7b6b;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    display: none;   /* показывается JS, когда есть текст */
+}
+
+.search-clear-btn:hover {
+    background: #e6dbd0;
+}
+/* Заголовки поставщиков в результатах поиска */
+.search-supplier-header {
+    grid-column: 1 / -1;          /* растянуть на всю ширину сетки */
+    background: #d9cbb8;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.2rem;
+}

@@ -9,19 +9,22 @@ const cartTotalEl = document.getElementById('cart-total');
 const messagesOutputEl = document.getElementById('messages-output');
 const generateBtn = document.getElementById('generate-messages');
 
+// Элементы поиска
+const searchInput = document.getElementById('search-input');
+const searchClear = document.getElementById('search-clear');
+
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
 const cartToggleCount = document.getElementById('cart-toggle-count');
 const cartPanel = document.getElementById('cart-panel');
 const cartCloseBtn = document.getElementById('cart-close-btn');
 
-// Оверлей
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
 overlayDiv.style.display = 'none';
 document.body.appendChild(overlayDiv);
 overlayDiv.addEventListener('click', closeFullscreen);
 
-// --- Загрузка данных и восстановление корзины ---
+// --- Загрузка данных ---
 async function loadData() {
     try {
         const response = await fetch('data.json');
@@ -40,7 +43,6 @@ function restoreCartFromStorage() {
     if (savedCart) {
         try {
             cart = JSON.parse(savedCart);
-            // Проверка: могли измениться товары/поставщики, но пока оставляем как есть
             renderCart();
         } catch (e) {
             cart = {};
@@ -55,27 +57,33 @@ function saveCartToStorage() {
 function addToHistory() {
     if (Object.keys(cart).length === 0) return;
     const history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
-    // Глубокая копия текущей корзины с датой и уникальным id
     const orderCopy = {};
     for (const [supplierId, items] of Object.entries(cart)) {
         orderCopy[supplierId] = items.map(item => ({ ...item }));
     }
     history.push({
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 6), // уникальный id
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 6),
         date: new Date().toISOString(),
         cart: orderCopy
     });
     localStorage.setItem('orderHistory', JSON.stringify(history));
 }
 
-// --- Отрисовка поставщиков ---
+// --- Поставщики ---
 function renderSupplierList() {
     supplierListEl.innerHTML = '';
     suppliers.forEach(supplier => {
         const li = document.createElement('li');
         li.textContent = supplier.name;
         li.dataset.id = supplier.id;
-        li.addEventListener('click', () => selectSupplier(supplier.id));
+        li.addEventListener('click', () => {
+            if (activeSupplierId === supplier.id) {
+                // Повторный клик — снять выделение
+                deselectSupplier();
+            } else {
+                selectSupplier(supplier.id);
+            }
+        });
         if (supplier.id === activeSupplierId) li.classList.add('active');
         supplierListEl.appendChild(li);
     });
@@ -86,11 +94,69 @@ function selectSupplier(id) {
     document.querySelectorAll('#supplier-list li').forEach(li => {
         li.classList.toggle('active', li.dataset.id == id);
     });
-    renderProducts(id);
+    searchInput.placeholder = '🔍 Поиск по товарам поставщика...';
+    // Не сбрасываем значение поиска – фильтруем внутри поставщика
+    filterAndRenderProducts();
+    searchInput.focus();
 }
 
-function renderProducts(supplierId) {
-    const supplier = suppliers.find(s => s.id == supplierId);
+function deselectSupplier() {
+    activeSupplierId = null;
+    document.querySelectorAll('#supplier-list li').forEach(li => li.classList.remove('active'));
+    searchInput.placeholder = '🔍 Поиск по всем товарам...';
+    filterAndRenderProducts();
+    searchInput.focus();
+}
+
+// --- Поиск и отрисовка товаров ---
+function filterAndRenderProducts() {
+    const query = searchInput.value.trim().toLowerCase();
+
+    // Ситуация: поставщик не выбран и запрос пуст -> показываем инструкцию
+    if (!activeSupplierId && !query) {
+        showWelcomeMessage();
+        return;
+    }
+
+    productListEl.classList.remove('welcome-message');
+
+    // Глобальный поиск (по всем поставщикам)
+    if (!activeSupplierId) {
+        const allResults = [];
+        suppliers.forEach(supplier => {
+            if (!supplier.products) return;
+            const matching = supplier.products.filter(prod => {
+                const nameMatch = prod.name.toLowerCase().includes(query);
+                const articleMatch = prod.article && prod.article.toLowerCase().includes(query);
+                return nameMatch || articleMatch;
+            });
+            if (matching.length > 0) {
+                allResults.push({
+                    supplierId: supplier.id,
+                    supplierName: supplier.name,
+                    products: matching
+                });
+            }
+        });
+
+        if (allResults.length === 0) {
+            productListEl.innerHTML = '<p>Ничего не найдено</p>';
+            return;
+        }
+
+        let html = '';
+        allResults.forEach(group => {
+            html += `<div class="search-supplier-header">${escapeHtml(group.supplierName)}</div>`;
+            group.products.forEach(prod => {
+                html += buildProductCard(group.supplierId, prod);
+            });
+        });
+        productListEl.innerHTML = html;
+        return;
+    }
+
+    // Поиск внутри выбранного поставщика
+    const supplier = suppliers.find(s => s.id == activeSupplierId);
     if (!supplier) {
         productListEl.innerHTML = '<p>Поставщик не найден</p>';
         return;
@@ -99,34 +165,80 @@ function renderProducts(supplierId) {
         productListEl.innerHTML = '<p>Нет товаров</p>';
         return;
     }
-    
-    productListEl.classList.remove('welcome-message');
+
+    let filtered = supplier.products;
+    if (query) {
+        filtered = supplier.products.filter(prod => {
+            const nameMatch = prod.name.toLowerCase().includes(query);
+            const articleMatch = prod.article && prod.article.toLowerCase().includes(query);
+            return nameMatch || articleMatch;
+        });
+    }
+
+    if (filtered.length === 0) {
+        productListEl.innerHTML = '<p>Ничего не найдено</p>';
+        return;
+    }
 
     let html = '';
-    supplier.products.forEach(prod => {
-        const imgSrc = prod.image ? escapeHtml(prod.image) : null;
-        html += `
-            <div class="product-card">
-                <div class="product-image">
-                    ${imgSrc 
-                        ? `<img src="${imgSrc}" alt="${escapeHtml(prod.name)}" loading="lazy" onerror="this.style.display='none'">`
-                        : `<div class="no-image">📷</div>`
-                    }
-                </div>
-                <div class="info">
-                    <div class="name">${escapeHtml(prod.name)}</div>
-                    ${prod.article ? `<div class="article">Арт. ${escapeHtml(prod.article)}</div>` : ''}
-                    ${prod.unit ? `<div class="unit">${escapeHtml(prod.unit)}</div>` : ''}
-                    ${prod.price ? `<div class="price">${prod.price.toFixed(2)} руб.</div>` : ''}
-                </div>
-                <button onclick="addToCart(${supplierId}, ${prod.id})">В корзину</button>
-            </div>
-        `;
+    filtered.forEach(prod => {
+        html += buildProductCard(supplier.id, prod);
     });
     productListEl.innerHTML = html;
 }
 
-// --- Корзина ---
+function buildProductCard(supplierId, prod) {
+    const imgSrc = prod.image ? escapeHtml(prod.image) : null;
+    return `
+        <div class="product-card">
+            <div class="product-image">
+                ${imgSrc
+                    ? `<img src="${imgSrc}" alt="${escapeHtml(prod.name)}" loading="lazy">`
+                    : `<div class="no-image">📷</div>`
+                }
+            </div>
+            <div class="info">
+                <div class="name">${escapeHtml(prod.name)}</div>
+                ${prod.article ? `<div class="article">Арт. ${escapeHtml(prod.article)}</div>` : ''}
+                ${prod.unit ? `<div class="unit">${escapeHtml(prod.unit)}</div>` : ''}
+                ${prod.price ? `<div class="price">${prod.price.toFixed(2)} руб.</div>` : ''}
+            </div>
+            <button onclick="addToCart(${supplierId}, ${prod.id})">В корзину</button>
+        </div>
+    `;
+}
+
+function showWelcomeMessage() {
+    productListEl.innerHTML = `
+        <div class="welcome-content">
+            <h2>👋 Добро пожаловать в систему заявок</h2>
+            <ol>
+                <li><strong>Выберите поставщика</strong> в левой панели</li>
+                <li><strong>Добавьте товары</strong> в корзину, нажимая кнопку «В корзину»</li>
+                <li>В корзине <strong>измените количество</strong> (кнопки «+» и «−») или удалите позиции</li>
+                <li>Когда всё готово — нажмите <strong>«Сформировать сообщения»</strong></li>
+                <li>Текст заявки появится в окне корзины — <strong>скопируйте</strong> его для отправки поставщику</li>
+            </ol>
+            <p class="welcome-hint">Корзина сохраняется даже после закрытия браузера. История заказов доступна по кнопке в шапке.</p>
+        </div>
+    `;
+    productListEl.classList.add('welcome-message');
+}
+
+// --- Обработчики поиска ---
+searchInput.addEventListener('input', () => {
+    searchClear.style.display = searchInput.value ? 'block' : 'none';
+    filterAndRenderProducts();
+});
+
+searchClear.addEventListener('click', () => {
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+    filterAndRenderProducts();
+    searchInput.focus();
+});
+
+// --- Корзина (все функции без изменений) ---
 function addToCart(supplierId, productId) {
     const supplier = suppliers.find(s => s.id == supplierId);
     if (!supplier) return;
@@ -199,7 +311,6 @@ function updateCartToggleCount() {
     cartToggleCount.textContent = totalItems;
 }
 
-// --- Полноэкранный режим ---
 function openFullscreen() {
     cartPanel.classList.add('fullscreen');
     overlayDiv.style.display = 'block';
@@ -210,7 +321,6 @@ function closeFullscreen() {
     overlayDiv.style.display = 'none';
 }
 
-// --- Отрисовка корзины ---
 function renderCart() {
     cartContentEl.innerHTML = '';
     if (Object.keys(cart).length === 0) {
@@ -253,7 +363,6 @@ function renderCart() {
         cartContentEl.appendChild(groupDiv);
     }
 
-    // Обработчики +/-
     document.querySelectorAll('.qty-minus').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const sid = e.target.dataset.supplier;
@@ -270,7 +379,6 @@ function renderCart() {
         });
     });
 
-    // Обработчики удаления
     document.querySelectorAll('.remove-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const sid = e.target.dataset.supplier;
@@ -287,17 +395,15 @@ function renderCart() {
     }
 
     updateCartToggleCount();
-    saveCartToStorage(); // <-- сохраняем корзину после каждого изменения
+    saveCartToStorage();
 }
 
-// --- Генерация сообщений ---
 function generateMessages() {
     if (Object.keys(cart).length === 0) {
         messagesOutputEl.innerHTML = '<p>Корзина пуста. Добавьте товары.</p>';
         return;
     }
 
-    // Сохраняем текущую корзину в историю
     addToHistory();
 
     let outputHtml = '';
@@ -320,7 +426,7 @@ function generateMessages() {
         `;
     }
     messagesOutputEl.innerHTML = outputHtml;
-    openFullscreen(); // раскрываем панель для удобного просмотра
+    openFullscreen();
 }
 
 function escapeHtml(text) {
