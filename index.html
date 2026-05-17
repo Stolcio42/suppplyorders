@@ -70,15 +70,23 @@
             <p>Загрузка данных...</p>
         </div>
     <!-- Экран авторизации -->
-    <div id="auth-overlay">
-        <div class="auth-box">
-            <h2>🔐 Доступ к заявкам</h2>
-            <p>Введите пароль для продолжения</p>
-            <input type="password" id="auth-password" placeholder="Пароль">
-            <div class="auth-error" id="auth-error"></div>
-            <button id="auth-submit">Войти</button>
-        </div>
+   <div id="auth-overlay">
+    <div class="auth-box">
+        <h2>🔐 Доступ к заявкам</h2>
+        <p>Выберите сотрудника и введите пароль</p>
+        <select id="auth-user">
+            <option value="">-- Выберите сотрудника --</option>
+            <option>Гордей</option>
+            <option>Оля</option>
+            <option>Мыскал</option>
+            <option>Вика</option>
+            <!-- Добавьте своих сотрудников по образцу выше -->
+        </select>
+        <input type="password" id="auth-password" placeholder="Пароль">
+        <div class="auth-error" id="auth-error"></div>
+        <button id="auth-submit">Войти</button>
     </div>
+</div>
 
     <!-- Основной интерфейс (изначально скрыт) -->
     <div id="app" style="display: none;">
@@ -132,38 +140,46 @@
 
     <script src="script.js"></script>
     <script>
-        // Простая авторизация
-        (function() {
-            const CORRECT_PASSWORD = 'ВашПароль2024';   // ← ЗАМЕНИТЕ НА СВОЙ ПАРОЛЬ!
+    // Авторизация с выбором сотрудника
+    (function() {
+        const CORRECT_PASSWORD = 'ВашПароль2024';   // ← ЗАМЕНИТЕ НА СВОЙ ПАРОЛЬ!
 
-            const authOverlay = document.getElementById('auth-overlay');
-            const app = document.getElementById('app');
-            const passwordInput = document.getElementById('auth-password');
-            const authError = document.getElementById('auth-error');
-            const submitBtn = document.getElementById('auth-submit');
+        const authOverlay = document.getElementById('auth-overlay');
+        const app = document.getElementById('app');
+        const userSelect = document.getElementById('auth-user');
+        const passwordInput = document.getElementById('auth-password');
+        const authError = document.getElementById('auth-error');
+        const submitBtn = document.getElementById('auth-submit');
 
-            // Если уже авторизованы (проверим sessionStorage)
-            if (sessionStorage.getItem('auth') === 'ok') {
-                authOverlay.style.display = 'none';
-                app.style.display = 'block';
+        // Если уже авторизованы
+        if (sessionStorage.getItem('auth') === 'ok') {
+            authOverlay.style.display = 'none';
+            app.style.display = 'block';
+        }
+
+        function login() {
+            const userName = userSelect.value.trim();
+            if (!userName) {
+                authError.textContent = 'Пожалуйста, выберите сотрудника';
+                return;
             }
-
-            function login() {
-                if (passwordInput.value === CORRECT_PASSWORD) {
-                    sessionStorage.setItem('auth', 'ok');
-                    authOverlay.style.display = 'none';
-                    app.style.display = 'block';
-                } else {
-                    authError.textContent = 'Неверный пароль';
-                    passwordInput.value = '';
-                }
+            if (passwordInput.value !== CORRECT_PASSWORD) {
+                authError.textContent = 'Неверный пароль';
+                passwordInput.value = '';
+                return;
             }
+            // Успешный вход
+            sessionStorage.setItem('auth', 'ok');
+            sessionStorage.setItem('userName', userName);
+            authOverlay.style.display = 'none';
+            app.style.display = 'block';
+        }
 
-            submitBtn.addEventListener('click', login);
-            passwordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') login();
-            });
-        })();
-    </script>
+        submitBtn.addEventListener('click', login);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    })();
+</script>
 </body>
 </html>

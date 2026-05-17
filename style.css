@@ -719,3 +719,15 @@ mark {
     80% { opacity: 1; top: 20px; }
     100% { opacity: 0; top: 10px; }
 }
+/* Селект в форме авторизации */
+.auth-box select {
+    width: 100%;
+    padding: 0.7rem;
+    margin: 0.5rem 0;
+    border: 1px solid #d9cfbe;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: white;
+    color: #4a4a4a;
+}
