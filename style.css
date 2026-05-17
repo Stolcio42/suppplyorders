@@ -658,3 +658,12 @@ aside {
     color: #4a4a4a;
     font-weight: 500;
 }
+
+/* Подсветка найденного текста */
+mark {
+    background-color: #f9e79f;
+    color: inherit;
+    padding: 0 0.2em;
+    border-radius: 3px;
+    font-weight: 600;
+}

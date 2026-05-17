@@ -156,7 +156,7 @@ function filterAndRenderProducts() {
         allResults.forEach(group => {
             html += `<div class="search-supplier-header">${escapeHtml(group.supplierName)}</div>`;
             group.products.forEach(prod => {
-                html += buildProductCard(group.supplierId, prod);
+                html += buildProductCard(group.supplierId, prod, query);
             });
         });
         productListEl.innerHTML = html;
@@ -190,13 +190,27 @@ function filterAndRenderProducts() {
 
     let html = '';
     filtered.forEach(prod => {
-        html += buildProductCard(supplier.id, prod);
+        html += buildProductCard(supplier.id, prod, query);
     });
     productListEl.innerHTML = html;
 }
 
-function buildProductCard(supplierId, prod) {
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightText(text, query) {
+    if (!query) return text;   // если запрос пуст, возвращаем как есть
+    const escapedQuery = escapeRegex(query);
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+}
+
+function buildProductCard(supplierId, prod, searchQuery = '') {
     const imgSrc = prod.image ? escapeHtml(prod.image) : null;
+    const highlightedName = highlightText(escapeHtml(prod.name), searchQuery);
+    const highlightedArticle = prod.article ? highlightText(escapeHtml(prod.article), searchQuery) : '';
+
     return `
         <div class="product-card">
             <div class="product-image">
@@ -206,8 +220,8 @@ function buildProductCard(supplierId, prod) {
                 }
             </div>
             <div class="info">
-                <div class="name">${escapeHtml(prod.name)}</div>
-                ${prod.article ? `<div class="article">Арт. ${escapeHtml(prod.article)}</div>` : ''}
+                <div class="name">${highlightedName}</div>
+                ${highlightedArticle ? `<div class="article">Арт. ${highlightedArticle}</div>` : ''}
                 ${prod.unit ? `<div class="unit">${escapeHtml(prod.unit)}</div>` : ''}
                 ${prod.price ? `<div class="price">${prod.price.toFixed(2)} руб.</div>` : ''}
             </div>
