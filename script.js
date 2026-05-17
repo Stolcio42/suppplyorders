@@ -19,6 +19,7 @@ const cartPanel = document.getElementById('cart-panel');
 const cartCloseBtn = document.getElementById('cart-close-btn');
 // Индикатор загрузки
 const loadingIndicator = document.getElementById('loading-indicator');
+const notification = document.getElementById('notification');
 
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
@@ -28,22 +29,25 @@ overlayDiv.addEventListener('click', closeFullscreen);
 
 // --- Загрузка данных ---
 async function loadData() {
-    // Показываем индикатор
     loadingIndicator.style.display = 'flex';
-    
     try {
         const response = await fetch('data.json');
         if (!response.ok) throw new Error('Не удалось загрузить data.json');
         suppliers = await response.json();
         renderSupplierList();
         restoreCartFromStorage();
-    } catch (err) {
+        
+        // Уведомление о повторе из истории
+        if (sessionStorage.getItem('from_history') === 'true') {
+            sessionStorage.removeItem('from_history');
+            showNotification('✅ Корзина загружена из истории');
+        }
+        } catch (err) {
         alert('Ошибка загрузки данных: ' + err.message);
         console.error(err);
-    } finally {
-        // Скрываем индикатор в любом случае (даже при ошибке)
+        } finally {
         loadingIndicator.style.display = 'none';
-    }
+     }
 }
 
 function restoreCartFromStorage() {
@@ -488,3 +492,17 @@ window.addEventListener('DOMContentLoaded', () => {
     cartCloseBtn.addEventListener('click', closeFullscreen);
     document.getElementById('clear-cart-btn').addEventListener('click', clearCart);
 });
+
+function showNotification(message) {
+    if (!notification) return;
+    notification.textContent = message;
+    notification.style.display = 'block';
+    // Принудительно перезапустить анимацию
+    notification.style.animation = 'none';
+    notification.offsetHeight; // reflow
+    notification.style.animation = 'fadeInOut 3s ease forwards';
+    // Скрыть после завершения
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 3000);
+}

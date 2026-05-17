@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>История заказов</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -20,12 +20,6 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-        .controls {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
         }
         .btn {
             background: #deb887;
@@ -51,6 +45,13 @@
         .btn-danger:hover {
             background: #d48383;
             color: white;
+        }
+        .btn-repeat {
+            background: #6ca6a0;
+            color: white;
+        }
+        .btn-repeat:hover {
+            background: #5a8e87;
         }
         .order {
             background: white;
@@ -138,13 +139,13 @@
             }
 
             let html = '';
-            // новые сверху
             history.slice().reverse().forEach(order => {
                 const date = new Date(order.date).toLocaleString('ru-RU');
                 html += `<div class="order">
                     <div class="order-header">
                         <span class="order-date">${date}</span>
                         <div class="order-actions">
+                            <button class="btn btn-repeat repeat-order-btn" data-id="${order.id}">Повторить</button>
                             <button class="delete-order-btn" data-id="${order.id}">Удалить</button>
                         </div>
                     </div>`;
@@ -165,13 +166,34 @@
             });
             container.innerHTML = html;
 
-            // Навешиваем обработчики на кнопки удаления
+            // Обработчики удаления
             document.querySelectorAll('.delete-order-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const orderId = this.getAttribute('data-id');
                     deleteOrderById(orderId);
                 });
             });
+
+            // Обработчики повтора
+            document.querySelectorAll('.repeat-order-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const orderId = this.getAttribute('data-id');
+                    repeatOrder(orderId);
+                });
+            });
+        }
+
+        function repeatOrder(orderId) {
+            const history = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+            const order = history.find(o => o.id === orderId);
+            if (!order) return;
+            if (!confirm('Заменить текущую корзину составом этого заказа?')) return;
+            // Заменяем корзину в localStorage
+            localStorage.setItem('cart', JSON.stringify(order.cart));
+            // Устанавливаем флаг для уведомления на главной
+            sessionStorage.setItem('from_history', 'true');
+            // Переходим на главную страницу
+            window.location.href = 'index.html';
         }
 
         function deleteOrderById(orderId) {
