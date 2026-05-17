@@ -304,7 +304,13 @@ function changeQty(supplierId, productId, delta) {
     }
     renderCart();
 }
-
+function clearCart() {
+    if (Object.keys(cart).length === 0) return;
+    if (confirm('Вы уверены, что хотите очистить корзину?')) {
+        cart = {};
+        renderCart();      // renderCart вызовет saveCartToStorage и обновит отображение
+    }
+}
 function removeFromCart(supplierId, productId) {
     if (cart[supplierId]) {
         cart[supplierId] = cart[supplierId].filter(item => item.id != productId);
@@ -480,4 +486,5 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     cartCloseBtn.addEventListener('click', closeFullscreen);
+    document.getElementById('clear-cart-btn').addEventListener('click', clearCart);
 });

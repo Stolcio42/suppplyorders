@@ -667,3 +667,31 @@ mark {
     border-radius: 3px;
     font-weight: 600;
 }
+
+/* Шапка корзины */
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.cart-header h2 {
+    margin: 0;
+}
+
+/* Кнопка очистки корзины */
+.clear-cart-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: 4px;
+    color: #a34545;
+    transition: background 0.2s;
+}
+
+.clear-cart-btn:hover {
+    background: #f4c6c6;
+}
