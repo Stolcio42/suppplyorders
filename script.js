@@ -20,7 +20,25 @@ const cartCloseBtn = document.getElementById('cart-close-btn');
 // Индикатор загрузки
 const loadingIndicator = document.getElementById('loading-indicator');
 const notification = document.getElementById('notification');
+// Переключение темы
+const themeToggle = document.getElementById('theme-toggle');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+const savedTheme = localStorage.getItem('theme');
 
+if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
+    document.documentElement.classList.add('dark-theme');
+    if (themeToggle) themeToggle.textContent = '☀️';
+} else {
+    if (themeToggle) themeToggle.textContent = '🌙';
+}
+
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark-theme');
+        themeToggle.textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+}
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
 overlayDiv.style.display = 'none';
