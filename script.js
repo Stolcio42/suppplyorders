@@ -17,6 +17,8 @@ const cartToggleBtn = document.getElementById('cart-toggle-btn');
 const cartToggleCount = document.getElementById('cart-toggle-count');
 const cartPanel = document.getElementById('cart-panel');
 const cartCloseBtn = document.getElementById('cart-close-btn');
+// Индикатор загрузки
+const loadingIndicator = document.getElementById('loading-indicator');
 
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
@@ -26,6 +28,9 @@ overlayDiv.addEventListener('click', closeFullscreen);
 
 // --- Загрузка данных ---
 async function loadData() {
+    // Показываем индикатор
+    loadingIndicator.style.display = 'flex';
+    
     try {
         const response = await fetch('data.json');
         if (!response.ok) throw new Error('Не удалось загрузить data.json');
@@ -35,6 +40,9 @@ async function loadData() {
     } catch (err) {
         alert('Ошибка загрузки данных: ' + err.message);
         console.error(err);
+    } finally {
+        // Скрываем индикатор в любом случае (даже при ошибке)
+        loadingIndicator.style.display = 'none';
     }
 }
 
