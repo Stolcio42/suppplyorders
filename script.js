@@ -602,12 +602,24 @@ async function initApp() {
     registerSW();
 }
 
-// Ждём готовности Firebase
-window.addEventListener('firebase-ready', () => {
-    console.log('Получено событие firebase-ready');
+// Функция, которая запускает всё после готовности Firebase
+function onFirebaseReady() {
+    console.log('onFirebaseReady вызвана');
     startApp().catch(err => {
         console.error('Ошибка в startApp:', err);
         loadingIndicator.style.display = 'none';
         alert('Произошла ошибка инициализации приложения');
     });
-});
+}
+
+// Если Firebase уже инициализирован (глобальные переменные доступны), запускаемся сразу
+if (window.db && window.auth) {
+    console.log('Firebase уже готов, запускаем onFirebaseReady');
+    onFirebaseReady();
+} else {
+    console.log('Ожидаем событие firebase-ready');
+    window.addEventListener('firebase-ready', () => {
+        console.log('Получено событие firebase-ready');
+        onFirebaseReady();
+    });
+}
