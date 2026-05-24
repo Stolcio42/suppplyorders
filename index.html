@@ -98,31 +98,31 @@
         <button onclick="refreshApp()">Обновить</button>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+    <!-- Firebase Compat (8.10.1 – стабильная, надёжная) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-        // Ваш конфиг
+    <script>
+        // Инициализация Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyB46WuAPvhjHX-VnJq04TgITPeIvb9QB_o",
-            authDomain: "supplier-orders-kff.firebaseapp.com",
-            projectId: "supplier-orders-kff",
-            storageBucket: "supplier-orders-kff.firebasestorage.app",
-            messagingSenderId: "977001215962",
-            appId: "1:977001215962:web:4f869362a077600a8c32e3"
-        };
+        apiKey: "AIzaSyB46WuAPvhjHX-VnJq04TgITPeIvb9QB_o",
+        authDomain: "supplier-orders-kff.firebaseapp.com",
+        projectId: "supplier-orders-kff",
+        storageBucket: "supplier-orders-kff.firebasestorage.app",
+        messagingSenderId: "977001215962",
+        appId: "1:977001215962:web:4f869362a077600a8c32e3"
+         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        firebase.initializeApp(firebaseConfig);
 
-        // Глобальные переменные (доступны внутри модуля)
-        window.db = db;
-        window.auth = auth;
+        // Делаем объекты доступными глобально
+        window.db = firebase.firestore();
+        window.auth = firebase.auth();
 
-        // Инициализация основного приложения будет в script.js
+        // Сообщаем, что Firebase готов
+        console.log('Firebase готов (compat)');
+        window.dispatchEvent(new Event('firebase-ready'));
     </script>
     <script src="script.js?v=7"></script>
 </body>
