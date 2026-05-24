@@ -6,7 +6,7 @@
     <title>Заявки поставщикам</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=9">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
@@ -21,25 +21,27 @@
         <div class="auth-box">
             <h2>🔐 Вход в систему</h2>
             <p>Используйте свою рабочую почту</p>
-            <input type="email" id="auth-email" placeholder="Email">
-            <input type="password" id="auth-password" placeholder="Пароль">
+            <input type="email" id="auth-email" placeholder="Email" autocomplete="off">
+            <input type="password" id="auth-password" placeholder="Пароль" autocomplete="off">
             <div class="auth-error" id="auth-error"></div>
             <button id="auth-login-btn">Войти</button>
-            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;"> Нет аккаунта?
-            <a href="#" id="show-register" class="btn-link">Зарегистрироваться</a>
+            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;">
+                Нет аккаунта?
+                <a href="#" id="show-register" class="btn-link">Зарегистрироваться</a>
             </p>
         </div>
-            <!-- Форма регистрации (скрыта) -->
+        <!-- Форма регистрации (скрыта) -->
         <div class="auth-box" id="register-box" style="display:none;">
             <h2>📝 Регистрация</h2>
-            <input type="text" id="reg-name" placeholder="Ваше имя">
-            <input type="email" id="reg-email" placeholder="Email">
-            <input type="password" id="reg-password" placeholder="Пароль">
+            <input type="text" id="reg-name" placeholder="Ваше имя" autocomplete="off">
+            <input type="email" id="reg-email" placeholder="Email" autocomplete="off">
+            <input type="password" id="reg-password" placeholder="Пароль" autocomplete="off">
             <div class="auth-error" id="reg-error"></div>
             <button id="auth-register-btn">Зарегистрироваться</button>
-            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;"> Уже есть аккаунт?
-            <a href="#" id="show-login" class="btn-link">Войти</a>
-</p>
+            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;">
+                Уже есть аккаунт?
+                <a href="#" id="show-login" class="btn-link">Войти</a>
+            </p>
         </div>
     </div>
 
@@ -70,8 +72,8 @@
                             <li><strong>Выберите поставщика</strong> в левой панели</li>
                             <li><strong>Добавьте товары</strong> в корзину, нажимая кнопку «В корзину»</li>
                             <li>В корзине <strong>измените количество</strong> или удалите позиции</li>
-                            <li>Когда всё готово — нажмите <strong>«Отправить заказ»</strong></li>
-                            <li>После отправки заказ попадёт в историю и статистику</li>
+                            <li>Когда всё готово — нажмите <strong>«Сформировать сообщения»</strong></li>
+                            <li>Текст заявки появится в окне корзины — <strong>скопируйте</strong> его для отправки поставщику</li>
                         </ol>
                         <p class="welcome-hint">Корзина сохраняется автоматически. История доступна по кнопке в шапке.</p>
                     </div>
@@ -101,32 +103,38 @@
         <button onclick="refreshApp()">Обновить</button>
     </div>
 
-    <!-- Firebase Compat (8.10.1 – стабильная, надёжная) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase Compat (8.10.1) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-        // Инициализация Firebase
-        const firebaseConfig = {
+      // Инициализация Firebase
+      const firebaseConfig = {
         apiKey: "AIzaSyB46WuAPvhjHX-VnJq04TgITPeIvb9QB_o",
         authDomain: "supplier-orders-kff.firebaseapp.com",
         projectId: "supplier-orders-kff",
         storageBucket: "supplier-orders-kff.firebasestorage.app",
         messagingSenderId: "977001215962",
         appId: "1:977001215962:web:4f869362a077600a8c32e3"
-         };
+      };
 
-        firebase.initializeApp(firebaseConfig);
+      firebase.initializeApp(firebaseConfig);
+      window.db = firebase.firestore();
+      window.auth = firebase.auth();
 
-        // Делаем объекты доступными глобально
-        window.db = firebase.firestore();
-        window.auth = firebase.auth();
+      console.log('Firebase готов (compat)');
+      window.dispatchEvent(new Event('firebase-ready'));
 
-        // Сообщаем, что Firebase готов
-        console.log('Firebase готов (compat)');
-        window.dispatchEvent(new Event('firebase-ready'));
+      // Убираем проблему с bfcache (возврат назад)
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+          // Страница восстановлена из кэша – перезагружаем, чтобы Firebase нормально инициализировался
+          window.location.reload();
+        }
+      });
     </script>
-    <script src="script.js?v=7"></script>
+
+    <script src="script.js?v=9"></script>
 </body>
 </html>

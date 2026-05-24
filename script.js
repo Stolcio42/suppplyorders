@@ -14,7 +14,6 @@ const cartContentEl = document.getElementById('cart-content');
 const cartTotalEl = document.getElementById('cart-total');
 const messagesOutputEl = document.getElementById('messages-output');
 const generateBtn = document.getElementById('generate-messages');
-const submitOrderBtn = document.getElementById('submit-order-btn');
 const searchInput = document.getElementById('search-input');
 const searchClear = document.getElementById('search-clear');
 const cartToggleBtn = document.getElementById('cart-toggle-btn');
@@ -55,7 +54,7 @@ function showNotification(message) {
     notification.textContent = message;
     notification.style.display = 'block';
     notification.style.animation = 'none';
-    notification.offsetHeight; // reflow
+    notification.offsetHeight;
     notification.style.animation = 'fadeInOut 3s ease forwards';
     setTimeout(() => { notification.style.display = 'none'; }, 3000);
 }
@@ -181,7 +180,7 @@ function deselectSupplier() {
     searchInput.focus();
 }
 
-// --- Поиск и отрисовка товаров (без изменений) ---
+// --- Поиск и отрисовка товаров ---
 function filterAndRenderProducts() {
     const query = searchInput.value.trim().toLowerCase();
     if (!activeSupplierId && !query) {
@@ -274,8 +273,8 @@ function showWelcomeMessage() {
                 <li><strong>Выберите поставщика</strong> в левой панели</li>
                 <li><strong>Добавьте товары</strong> в корзину, нажимая кнопку «В корзину»</li>
                 <li>В корзине <strong>измените количество</strong> или удалите позиции</li>
-                <li>Когда всё готово — нажмите <strong>«Отправить заказ»</strong></li>
-                <li>После отправки заказ попадёт в историю и статистику</li>
+                <li>Когда всё готово — нажмите <strong>«Сформировать сообщения»</strong></li>
+                <li>Текст заявки появится в окне корзины — <strong>скопируйте</strong> его для отправки поставщику</li>
             </ol>
             <p class="welcome-hint">Корзина сохраняется автоматически. История доступна по кнопке в шапке.</p>
         </div>
@@ -283,7 +282,7 @@ function showWelcomeMessage() {
     productListEl.classList.add('welcome-message');
 }
 
-// --- Корзина (без изменений, кроме вызовов saveCart) ---
+// --- Корзина ---
 function addToCart(supplierId, productId) {
     const supplier = suppliers.find(s => s.id == supplierId);
     if (!supplier) return;
@@ -430,12 +429,9 @@ function closeFullscreen() {
     overlayDiv.style.display = 'none';
 }
 
-// --- Отправка заказа (compat) ---
+// --- Отправка заказа (сохраняет в Firestore и очищает корзину) ---
 async function submitOrder() {
-    if (Object.keys(cart).length === 0) {
-        alert('Корзина пуста');
-        return;
-    }
+    if (Object.keys(cart).length === 0) return;
     const userDoc = await db.collection('users').doc(currentUser.uid).get();
     const userName = userDoc.exists ? userDoc.data().name : 'Неизвестный';
     const orderData = {
@@ -577,16 +573,16 @@ async function startApp() {
         searchInput.focus();
     });
 
-    // Кнопки корзины
+    // Единственная кнопка корзины с подтверждением
     generateBtn.addEventListener('click', () => {
-    if (Object.keys(cart).length === 0) {
-        alert('Корзина пуста');
-        return;
-    }
-    if (!confirm('Вы уверены, что хотите сформировать заявку?')) return;
-    submitOrder(); // эта функция сохраняет заказ в Firestore, очищает корзину и показывает сообщения
-});
-    submitOrderBtn.addEventListener('click', submitOrder);
+        if (Object.keys(cart).length === 0) {
+            alert('Корзина пуста');
+            return;
+        }
+        if (!confirm('Вы уверены, что хотите сформировать заявку?')) return;
+        submitOrder();
+    });
+
     clearCartBtn.addEventListener('click', clearCart);
     cartToggleBtn.addEventListener('click', () => {
         if (cartPanel.classList.contains('fullscreen')) {
@@ -597,7 +593,7 @@ async function startApp() {
     });
     cartCloseBtn.addEventListener('click', closeFullscreen);
 
-    // Загружаем каталог сразу
+    // Загружаем каталог (чтобы индикатор исчез, а поставщики отобразились сразу после входа)
     await loadData();
     console.log('startApp завершена');
 }
@@ -608,7 +604,7 @@ async function initApp() {
     registerSW();
 }
 
-// --- Запуск ---
+// --- Запуск после готовности Firebase ---
 function onFirebaseReady() {
     console.log('onFirebaseReady вызвана');
     startApp().catch(err => {
