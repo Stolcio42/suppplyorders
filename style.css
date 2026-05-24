@@ -903,7 +903,7 @@ mark {
 }
 
 .user-menu-btn {
-    background: var(--accent-beige, #deb887);
+    background: #e6cfb3;
     border: none;
     font-size: 1.6rem;
     width: 40px;
@@ -915,6 +915,10 @@ mark {
     justify-content: center;
     color: white;
     transition: background 0.2s;
+}
+
+.user-menu-btn:hover {
+    background: #d4b896;
 }
 
 .user-menu-btn:hover {

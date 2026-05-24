@@ -24,13 +24,11 @@ const loadingIndicator = document.getElementById('loading-indicator');
 const notification = document.getElementById('notification');
 const clearCartBtn = document.getElementById('clear-cart-btn');
 
-// Новые элементы для меню пользователя
 const userMenuBtn = document.getElementById('user-menu-btn');
 const userMenuDropdown = document.getElementById('user-menu-dropdown');
 const themeCheckbox = document.getElementById('theme-checkbox');
 const menuLogoutBtn = document.getElementById('menu-logout-btn');
 
-// Оверлей полноэкранного режима корзины
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
 overlayDiv.style.display = 'none';
@@ -73,7 +71,7 @@ function copyToClipboard(btn, text) {
     });
 }
 
-// --- Тёмная тема (управляется чекбоксом в меню) ---
+// --- Тёмная тема ---
 function initTheme() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
     const savedTheme = localStorage.getItem('theme');
@@ -98,23 +96,6 @@ function initTheme() {
     });
 }
 
-// --- Service Worker (автообновление без баннера) ---
-function registerSW() {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(reg => {
-            reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        window.location.reload();
-                    }
-                });
-            });
-        });
-    }
-}
-
 // --- Загрузка каталога ---
 async function loadData() {
     console.log('loadData начата');
@@ -134,7 +115,7 @@ async function loadData() {
     }
 }
 
-// --- Подписка на корзину в Firestore (compat) ---
+// --- Корзина в Firestore (compat) ---
 function subscribeCart() {
     if (cartUnsubscribe) cartUnsubscribe();
     if (!db || !currentUser) return;
@@ -289,7 +270,7 @@ function showWelcomeMessage() {
                 <li>Когда всё готово — нажмите <strong>«Сформировать сообщения»</strong></li>
                 <li>Текст заявки появится в окне корзины — <strong>скопируйте</strong> его для отправки поставщику</li>
             </ol>
-            <p class="welcome-hint">Корзина сохраняется автоматически. История доступна по кнопке в шапке.</p>
+            <p class="welcome-hint">Корзина сохраняется автоматически. История доступна в меню.</p>
         </div>
     `;
     productListEl.classList.add('welcome-message');
@@ -431,7 +412,7 @@ function renderCart() {
     updateCartToggleCount();
 }
 
-// --- Полноэкранный режим корзины ---
+// --- Полноэкранный режим ---
 function openFullscreen() {
     cartPanel.classList.add('fullscreen');
     overlayDiv.style.display = 'block';
@@ -442,7 +423,7 @@ function closeFullscreen() {
     overlayDiv.style.display = 'none';
 }
 
-// --- Отправка заказа (сохраняет в Firestore и очищает корзину) ---
+// --- Отправка заказа ---
 async function submitOrder() {
     if (Object.keys(cart).length === 0) return;
     const userDoc = await db.collection('users').doc(currentUser.uid).get();
@@ -494,13 +475,13 @@ function generateMessagesFromCart(cartObj, userName) {
     messagesOutputEl.innerHTML = outputHtml;
 }
 
-// --- Главная инициализация после готовности Firebase ---
+// --- Главная инициализация ---
 async function startApp() {
     console.log('startApp вызвана');
     db = window.db;
     auth = window.auth;
 
-    // Элементы авторизации
+    const sessionLoader = document.getElementById('session-loader');
     const authOverlay = document.getElementById('auth-overlay');
     const appDiv = document.getElementById('app');
     const loginBtn = document.getElementById('auth-login-btn');
@@ -517,7 +498,6 @@ async function startApp() {
     const registerBox = document.getElementById('register-box');
     const loginBox = authOverlay.querySelector('.auth-box:first-child');
 
-    // Переключение форм
     showRegister.addEventListener('click', (e) => {
         e.preventDefault();
         loginBox.style.display = 'none';
@@ -529,7 +509,6 @@ async function startApp() {
         loginBox.style.display = '';
     });
 
-    // Вход
     loginBtn.addEventListener('click', async () => {
         try {
             await auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPass.value);
@@ -538,7 +517,6 @@ async function startApp() {
         }
     });
 
-    // Регистрация
     registerBtn.addEventListener('click', async () => {
         const name = regName.value.trim();
         const email = regEmail.value.trim();
@@ -555,42 +533,58 @@ async function startApp() {
         }
     });
 
-    // Функция, которая выполняется, когда пользователь авторизован
-    async function onUserLoggedIn(user) {
+    // Функция показа формы авторизации
+    function showAuthForm() {
+        authOverlay.style.display = 'flex';
+        appDiv.style.display = 'none';
+        sessionLoader.style.display = 'none';
+    }
+
+    // Функция показа интерфейса после авторизации
+    async function showApp(user) {
         currentUser = user;
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
             currentUserRole = userDoc.data().role || 'сотрудник';
-            window.currentUserRole = currentUserRole;
         }
         authOverlay.style.display = 'none';
         appDiv.style.display = 'block';
-        await initApp();
-    }
+        sessionLoader.style.display = 'none';
 
-    // Функция при выходе
-    function onUserLoggedOut() {
-        currentUser = null;
-        authOverlay.style.display = 'flex';
-        appDiv.style.display = 'none';
-        if (cartUnsubscribe) cartUnsubscribe();
+        if (!cartUnsubscribe) subscribeCart();
+        // Загружаем каталог и инициализируем тему
+        await loadData();
+        initTheme();
     }
 
     // Слушатель изменений авторизации
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            await onUserLoggedIn(user);
+            await showApp(user);
         } else {
-            onUserLoggedOut();
+            showAuthForm();
         }
     });
 
-    // Мгновенная проверка: если пользователь уже есть (bfcache, повторный вход)
+    // Мгновенная проверка (для bfcache или уже авторизованных)
     if (auth.currentUser) {
-        await onUserLoggedIn(auth.currentUser);
+        await showApp(auth.currentUser);
+    } else {
+        showAuthForm();
     }
 
-    // --- Меню пользователя ---
+    // Обработчик pageshow для возврата из bfcache
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted && auth.currentUser && appDiv.style.display === 'none') {
+            // Принудительно показываем интерфейс
+            authOverlay.style.display = 'none';
+            appDiv.style.display = 'block';
+            sessionLoader.style.display = 'none';
+            if (!cartUnsubscribe) subscribeCart();
+        }
+    });
+
+    // Меню пользователя
     userMenuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         userMenuDropdown.classList.toggle('open');
@@ -607,7 +601,7 @@ async function startApp() {
         auth.signOut();
     });
 
-    // Обработчики поиска
+    // Поиск
     searchInput.addEventListener('input', () => {
         searchClear.style.display = searchInput.value ? 'block' : 'none';
         filterAndRenderProducts();
@@ -619,7 +613,7 @@ async function startApp() {
         searchInput.focus();
     });
 
-    // Кнопка формирования заявки
+    // Кнопка формирования
     generateBtn.addEventListener('click', () => {
         if (Object.keys(cart).length === 0) {
             alert('Корзина пуста');
@@ -638,24 +632,14 @@ async function startApp() {
         }
     });
     cartCloseBtn.addEventListener('click', closeFullscreen);
-
-    // Загружаем каталог (поставщики появятся после входа)
-    await loadData();
-    console.log('startApp завершена');
 }
 
-async function initApp() {
-    subscribeCart();
-    initTheme();
-    registerSW();
-}
-
-// --- Запуск после готовности Firebase ---
+// --- Запуск ---
 function onFirebaseReady() {
     console.log('onFirebaseReady вызвана');
     startApp().catch(err => {
         console.error('Ошибка в startApp:', err);
-        loadingIndicator.style.display = 'none';
+        document.getElementById('session-loader').style.display = 'none';
         alert('Произошла ошибка инициализации приложения');
     });
 }
