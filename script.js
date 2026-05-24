@@ -578,7 +578,14 @@ async function startApp() {
     });
 
     // Кнопки корзины
-    generateBtn.addEventListener('click', generateMessages);
+    generateBtn.addEventListener('click', () => {
+    if (Object.keys(cart).length === 0) {
+        alert('Корзина пуста');
+        return;
+    }
+    if (!confirm('Вы уверены, что хотите сформировать заявку?')) return;
+    submitOrder(); // эта функция сохраняет заказ в Firestore, очищает корзину и показывает сообщения
+});
     submitOrderBtn.addEventListener('click', submitOrder);
     clearCartBtn.addEventListener('click', clearCart);
     cartToggleBtn.addEventListener('click', () => {

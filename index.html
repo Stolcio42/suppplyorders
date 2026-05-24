@@ -25,9 +25,11 @@
             <input type="password" id="auth-password" placeholder="Пароль">
             <div class="auth-error" id="auth-error"></div>
             <button id="auth-login-btn">Войти</button>
-            <p style="margin-top:1rem; font-size:0.9rem;">Нет аккаунта? <a href="#" id="show-register">Зарегистрироваться</a></p>
+            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;"> Нет аккаунта?
+            <a href="#" id="show-register" class="btn-link">Зарегистрироваться</a>
+            </p>
         </div>
-        <!-- Форма регистрации (скрыта) -->
+            <!-- Форма регистрации (скрыта) -->
         <div class="auth-box" id="register-box" style="display:none;">
             <h2>📝 Регистрация</h2>
             <input type="text" id="reg-name" placeholder="Ваше имя">
@@ -35,7 +37,9 @@
             <input type="password" id="reg-password" placeholder="Пароль">
             <div class="auth-error" id="reg-error"></div>
             <button id="auth-register-btn">Зарегистрироваться</button>
-            <p style="margin-top:1rem; font-size:0.9rem;"><a href="#" id="show-login">Войти</a></p>
+            <p style="margin-top:1rem; font-size:0.9rem; text-align:center;"> Уже есть аккаунт?
+            <a href="#" id="show-login" class="btn-link">Войти</a>
+</p>
         </div>
     </div>
 
@@ -82,7 +86,6 @@
                 <div id="cart-content"></div>
                 <div id="cart-total"></div>
                 <button id="generate-messages">Сформировать сообщения</button>
-                <button id="submit-order-btn" class="btn-submit-order">📤 Отправить заказ</button>
                 <div id="messages-output"></div>
             </aside>
             <button id="cart-toggle-btn" class="cart-toggle-btn" title="Корзина">
