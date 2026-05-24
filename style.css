@@ -808,21 +808,77 @@ mark {
     color: var(--text-primary);
 }
 
-.auth-box button {
-    background: var(--accent-green);
-    color: white;
+/* Общие стили кнопок в форме авторизации */
+.auth-box button,
+.auth-box .btn-link {
+    display: inline-block;
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    margin-top: 0.8rem;
     border: none;
-    padding: 0.7rem 1.5rem;
-    border-radius: 8px;
+    border-radius: 10px;
     font-weight: 600;
-    cursor: pointer;
     font-size: 1rem;
-    transition: background 0.2s;
-    margin-top: 0.5rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    text-align: center;
+    text-decoration: none;
+}
+
+/* Основная кнопка "Войти" */
+.auth-box button {
+    background: var(--accent-beige, #deb887);
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
 }
 
 .auth-box button:hover {
-    background: var(--accent-green-dark);
+    background: var(--accent-beige-dark, #c8a27a);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+}
+
+.auth-box button:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Ссылка "Зарегистрироваться" как вторичная кнопка */
+.auth-box .btn-link {
+    background: transparent;
+    color: var(--accent-beige-dark, #a3755c);
+    border: 2px solid var(--accent-beige, #deb887);
+}
+
+.auth-box .btn-link:hover {
+    background: var(--accent-beige, #deb887);
+    color: white;
+}
+
+.auth-box .btn-link:active {
+    transform: scale(0.97);
+}
+
+/* Поля ввода и селекты */
+.auth-box input,
+.auth-box select {
+    width: 100%;
+    padding: 0.8rem;
+    margin: 0.5rem 0;
+    border: 1px solid var(--border-soft, #d9cfbe);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--bg-card, white);
+    color: var(--text-primary, #4a4a4a);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-box input:focus,
+.auth-box select:focus {
+    outline: none;
+    border-color: var(--accent-green, #b4d3c4);
+    box-shadow: 0 0 0 3px rgba(180, 211, 196, 0.3);
 }
 
 .auth-error {
