@@ -55,7 +55,7 @@ function showNotification(message) {
     notification.textContent = message;
     notification.style.display = 'block';
     notification.style.animation = 'none';
-    notification.offsetHeight;
+    notification.offsetHeight; // reflow
     notification.style.animation = 'fadeInOut 3s ease forwards';
     setTimeout(() => { notification.style.display = 'none'; }, 3000);
 }
@@ -105,16 +105,20 @@ function registerSW() {
 
 // --- Загрузка каталога ---
 async function loadData() {
+    console.log('loadData начата');
     loadingIndicator.style.display = 'flex';
     try {
         const resp = await fetch('data.json');
         if (!resp.ok) throw new Error('Ошибка загрузки');
         suppliers = await resp.json();
+        console.log('Каталог загружен');
         renderSupplierList();
     } catch (e) {
+        console.error('Ошибка каталога:', e);
         alert('Ошибка загрузки каталога: ' + e.message);
     } finally {
         loadingIndicator.style.display = 'none';
+        console.log('Индикатор загрузки скрыт');
     }
 }
 
@@ -483,6 +487,7 @@ function generateMessagesFromCart(cartObj, userName) {
 
 // --- Главная инициализация после готовности Firebase ---
 async function startApp() {
+    console.log('startApp вызвана');
     db = window.db;
     auth = window.auth;
 
@@ -536,8 +541,7 @@ async function startApp() {
             regError.textContent = 'Ошибка регистрации: ' + err.message;
         }
     });
-    // Загружаем каталог до проверки авторизации, чтобы индикатор погас
-    await loadData();
+
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
@@ -585,6 +589,10 @@ async function startApp() {
         }
     });
     cartCloseBtn.addEventListener('click', closeFullscreen);
+
+    // Загружаем каталог сразу после готовности Firebase, чтобы индикатор исчез до авторизации
+    await loadData();
+    console.log('startApp завершена');
 }
 
 async function initApp() {
@@ -595,9 +603,10 @@ async function initApp() {
 
 // Ждём готовности Firebase
 window.addEventListener('firebase-ready', () => {
+    console.log('Получено событие firebase-ready');
     startApp().catch(err => {
-        console.error(err);
+        console.error('Ошибка в startApp:', err);
         loadingIndicator.style.display = 'none';
-        alert('Произошла ошибка инициализации');
+        alert('Произошла ошибка инициализации приложения');
     });
 });
