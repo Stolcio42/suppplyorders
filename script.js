@@ -1,3 +1,4 @@
+console.log('script.js загружен и выполняется');
 // Глобальные переменные
 let db, auth;
 let currentUser = null;
