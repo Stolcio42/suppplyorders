@@ -445,7 +445,7 @@ async function submitOrder() {
     generateMessagesFromCart(cart, userName);
     cart = {};
     await db.collection('carts').doc(currentUser.uid).set({ items: {} });
-    showNotification('✅ Заказ отправлен');
+    showNotification('✅ Заявка сформирована');
     openFullscreen();
 }
 
