@@ -6,97 +6,49 @@
     <title>Заявки поставщикам</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Стили для экрана входа */
-        #auth-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #f8f5f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Nunito', sans-serif;
-        }
-        .auth-box {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 360px;
-            width: 90%;
-        }
-        .auth-box h2 {
-            color: #2f3e34;
-            margin-bottom: 1rem;
-        }
-        .auth-box input {
-            width: 100%;
-            padding: 0.7rem;
-            margin: 0.5rem 0 1rem;
-            border: 1px solid #d9cfbe;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-        .auth-box button {
-            background: #b4d3c4;
-            color: #2f3e34;
-            border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.2s;
-        }
-        .auth-box button:hover {
-            background: #9cc5b3;
-        }
-        .auth-error {
-            color: #c0392b;
-            font-size: 0.9rem;
-            min-height: 1.2rem;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css?v=7">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
     <!-- Индикатор загрузки -->
-        <div id="loading-indicator" class="loading-overlay">
-         <div class="spinner"></div>
-            <p>Загрузка данных...</p>
-        </div>
-    <!-- Экран авторизации -->
-   <div id="auth-overlay">
-    <div class="auth-box">
-        <h2>🔐 Доступ к заявкам</h2>
-        <p>Выберите сотрудника и введите пароль</p>
-        <select id="auth-user">
-            <option value="">-- Выберите сотрудника --</option>
-            <option>Гордей</option>
-            <option>Оля</option>
-            <option>Мыскал</option>
-            <option>Вика</option>
-            <!-- Добавьте своих сотрудников по образцу выше -->
-        </select>
-        <input type="password" id="auth-password" placeholder="Пароль">
-        <div class="auth-error" id="auth-error"></div>
-        <button id="auth-submit">Войти</button>
+    <div id="loading-indicator" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Загрузка данных...</p>
     </div>
-</div>
 
-    <!-- Основной интерфейс (изначально скрыт) -->
+    <!-- Экран авторизации Firebase -->
+    <div id="auth-overlay">
+        <div class="auth-box">
+            <h2>🔐 Вход в систему</h2>
+            <p>Используйте свою рабочую почту</p>
+            <input type="email" id="auth-email" placeholder="Email">
+            <input type="password" id="auth-password" placeholder="Пароль">
+            <div class="auth-error" id="auth-error"></div>
+            <button id="auth-login-btn">Войти</button>
+            <p style="margin-top:1rem; font-size:0.9rem;">Нет аккаунта? <a href="#" id="show-register">Зарегистрироваться</a></p>
+        </div>
+        <!-- Форма регистрации (скрыта) -->
+        <div class="auth-box" id="register-box" style="display:none;">
+            <h2>📝 Регистрация</h2>
+            <input type="text" id="reg-name" placeholder="Ваше имя">
+            <input type="email" id="reg-email" placeholder="Email">
+            <input type="password" id="reg-password" placeholder="Пароль">
+            <div class="auth-error" id="reg-error"></div>
+            <button id="auth-register-btn">Зарегистрироваться</button>
+            <p style="margin-top:1rem; font-size:0.9rem;"><a href="#" id="show-login">Войти</a></p>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс (скрыт до авторизации) -->
     <div id="app" style="display: none;">
         <header>
             <h1>Заявки поставщикам</h1>
             <a href="history.html" class="history-link">📋 История заказов</a>
+            <a href="stats.html" class="history-link">📊 Статистика</a>
             <button id="theme-toggle" class="theme-toggle" title="Переключить тему">🌙</button>
+            <button id="logout-btn" class="btn" style="background:#e4a0a0; color:#a34545;">Выйти</button>
         </header>
         <main>
-            <div id="notification" class="notification"></div>
             <aside id="suppliers-panel">
                 <h2>Поставщики</h2>
                 <ul id="supplier-list"></ul>
@@ -113,24 +65,24 @@
                         <ol>
                             <li><strong>Выберите поставщика</strong> в левой панели</li>
                             <li><strong>Добавьте товары</strong> в корзину, нажимая кнопку «В корзину»</li>
-                            <li>В корзине <strong>измените количество</strong> (кнопки «+» и «−») или удалите позиции</li>
-                            <li>Когда всё готово — нажмите <strong>«Сформировать сообщения»</strong></li>
-                            <li>Текст заявки появится в окне корзины — <strong>скопируйте</strong> его для отправки поставщику</li>
+                            <li>В корзине <strong>измените количество</strong> или удалите позиции</li>
+                            <li>Когда всё готово — нажмите <strong>«Отправить заказ»</strong></li>
+                            <li>После отправки заказ попадёт в историю и статистику</li>
                         </ol>
-                        <p class="welcome-hint">Корзина сохраняется даже после закрытия браузера. История заказов доступна по кнопке в шапке.</p>
+                        <p class="welcome-hint">Корзина сохраняется автоматически. История доступна по кнопке в шапке.</p>
                     </div>
                 </div>
             </section>
             <aside id="cart-panel">
                 <div class="cart-header">
-                <h2>Корзина</h2>
-                <button id="clear-cart-btn" class="clear-cart-btn" title="Очистить корзину">🗑️</button>
+                    <h2>Корзина</h2>
+                    <button id="clear-cart-btn" class="clear-cart-btn" title="Очистить корзину">🗑️</button>
                 </div>
-                <button id="cart-close-btn" class="cart-close-btn" title="Закрыть">✕</button>
                 <button id="cart-close-btn" class="cart-close-btn" title="Закрыть">✕</button>
                 <div id="cart-content"></div>
                 <div id="cart-total"></div>
                 <button id="generate-messages">Сформировать сообщения</button>
+                <button id="submit-order-btn" class="btn-submit-order">📤 Отправить заказ</button>
                 <div id="messages-output"></div>
             </aside>
             <button id="cart-toggle-btn" class="cart-toggle-btn" title="Корзина">
@@ -139,48 +91,39 @@
         </main>
     </div>
 
-    <script src="script.js"></script>
-    <script>
-    // Авторизация с выбором сотрудника
-    (function() {
-        const CORRECT_PASSWORD = 'ВашПароль2024';   // ← ЗАМЕНИТЕ НА СВОЙ ПАРОЛЬ!
+    <!-- Уведомления -->
+    <div id="notification" class="notification"></div>
+    <div id="update-notification" class="update-notification">
+        <span>🔄 Доступна новая версия сайта</span>
+        <button onclick="refreshApp()">Обновить</button>
+    </div>
 
-        const authOverlay = document.getElementById('auth-overlay');
-        const app = document.getElementById('app');
-        const userSelect = document.getElementById('auth-user');
-        const passwordInput = document.getElementById('auth-password');
-        const authError = document.getElementById('auth-error');
-        const submitBtn = document.getElementById('auth-submit');
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, query, where, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
-        // Если уже авторизованы
-        if (sessionStorage.getItem('auth') === 'ok') {
-            authOverlay.style.display = 'none';
-            app.style.display = 'block';
-        }
+        // Ваш конфиг
+        const firebaseConfig = {
+            apiKey: "AIzaSyB46WuAPvhjHX-VnJq04TgITPeIvb9QB_o",
+            authDomain: "supplier-orders-kff.firebaseapp.com",
+            projectId: "supplier-orders-kff",
+            storageBucket: "supplier-orders-kff.firebasestorage.app",
+            messagingSenderId: "977001215962",
+            appId: "1:977001215962:web:4f869362a077600a8c32e3"
+        };
 
-        function login() {
-            const userName = userSelect.value.trim();
-            if (!userName) {
-                authError.textContent = 'Пожалуйста, выберите сотрудника';
-                return;
-            }
-            if (passwordInput.value !== CORRECT_PASSWORD) {
-                authError.textContent = 'Неверный пароль';
-                passwordInput.value = '';
-                return;
-            }
-            // Успешный вход
-            sessionStorage.setItem('auth', 'ok');
-            sessionStorage.setItem('userName', userName);
-            authOverlay.style.display = 'none';
-            app.style.display = 'block';
-        }
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        submitBtn.addEventListener('click', login);
-        passwordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
-        });
-    })();
-</script>
+        // Глобальные переменные (доступны внутри модуля)
+        window.db = db;
+        window.auth = auth;
+
+        // Инициализация основного приложения будет в script.js
+    </script>
+    <script src="script.js?v=7"></script>
 </body>
 </html>
