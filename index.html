@@ -49,10 +49,18 @@
     <div id="app" style="display: none;">
         <header>
             <h1>Заявки поставщикам</h1>
-            <a href="history.html" class="history-link">📋 История заказов</a>
-            <a href="stats.html" class="history-link">📊 Статистика</a>
-            <button id="theme-toggle" class="theme-toggle" title="Переключить тему">🌙</button>
-            <button id="logout-btn" class="btn" style="background:#e4a0a0; color:#a34545;">Выйти</button>
+            <div class="user-menu-container">
+                <button id="user-menu-btn" class="user-menu-btn" title="Меню">👤</button>
+                <div id="user-menu-dropdown" class="user-menu-dropdown">
+                <label class="menu-item theme-item">
+                <span>Тёмная тема</span>
+                <input type="checkbox" id="theme-checkbox">
+                </label>
+                    <a href="history.html" class="menu-item">📋 История заказов</a>
+                    <a href="stats.html" class="menu-item">📊 Статистика</a>
+                <button id="menu-logout-btn" class="menu-item">🚪 Выйти</button>
+                </div>
+            </div>
         </header>
         <main>
             <aside id="suppliers-panel">

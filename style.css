@@ -897,3 +897,74 @@ mark {
         display: flex;
     }
 }
+/* Меню пользователя */
+.user-menu-container {
+    position: relative;
+}
+
+.user-menu-btn {
+    background: var(--accent-beige, #deb887);
+    border: none;
+    font-size: 1.6rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: background 0.2s;
+}
+
+.user-menu-btn:hover {
+    background: var(--accent-beige-dark, #c8a27a);
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: var(--bg-card, white);
+    border: 1px solid var(--border-soft, #d9cfbe);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 200px;
+    padding: 0.5rem 0;
+    display: none;
+    z-index: 100;
+}
+
+.user-menu-dropdown.open {
+    display: block;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 1.2rem;
+    color: var(--text-primary, #4a4a4a);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: background 0.15s;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.menu-item:hover {
+    background: var(--border-light, #e6dbd0);
+}
+
+/* Чекбокс темы */
+.theme-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-beige, #deb887);
+    cursor: pointer;
+}

@@ -22,9 +22,13 @@ const cartPanel = document.getElementById('cart-panel');
 const cartCloseBtn = document.getElementById('cart-close-btn');
 const loadingIndicator = document.getElementById('loading-indicator');
 const notification = document.getElementById('notification');
-const themeToggle = document.getElementById('theme-toggle');
-const logoutBtn = document.getElementById('logout-btn');
 const clearCartBtn = document.getElementById('clear-cart-btn');
+
+// Новые элементы для меню пользователя
+const userMenuBtn = document.getElementById('user-menu-btn');
+const userMenuDropdown = document.getElementById('user-menu-dropdown');
+const themeCheckbox = document.getElementById('theme-checkbox');
+const menuLogoutBtn = document.getElementById('menu-logout-btn');
 
 // Оверлей полноэкранного режима корзины
 let overlayDiv = document.createElement('div');
@@ -69,36 +73,40 @@ function copyToClipboard(btn, text) {
     });
 }
 
-// --- Тёмная тема ---
+// --- Тёмная тема (управляется чекбоксом в меню) ---
 function initTheme() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
+    const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark.matches);
+
+    if (isDark) {
         document.documentElement.classList.add('dark-theme');
-        themeToggle.textContent = '☀️';
     } else {
-        themeToggle.textContent = '🌙';
+        document.documentElement.classList.remove('dark-theme');
     }
-    themeToggle.addEventListener('click', () => {
-        const isDark = document.documentElement.classList.toggle('dark-theme');
-        themeToggle.textContent = isDark ? '☀️' : '🌙';
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    themeCheckbox.checked = isDark;
+
+    themeCheckbox.addEventListener('change', () => {
+        const darkEnabled = themeCheckbox.checked;
+        if (darkEnabled) {
+            document.documentElement.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark-theme');
+            localStorage.setItem('theme', 'light');
+        }
     });
 }
 
-// --- Service Worker ---
+// --- Service Worker (автообновление без баннера) ---
 function registerSW() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
-                    // Как только новый воркер установится и контроллер существует,
-                    // предлагаем обновить страницу автоматически
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        // Отправляем сообщение новому воркеру, чтобы он активировался
                         newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        // Перезагружаем страницу, чтобы применить обновление
                         window.location.reload();
                     }
                 });
@@ -450,7 +458,7 @@ async function submitOrder() {
     generateMessagesFromCart(cart, userName);
     cart = {};
     await db.collection('carts').doc(currentUser.uid).set({ items: {} });
-    showNotification('✅ Заявка сформирована');
+    showNotification('✅ Заказ отправлен');
     openFullscreen();
 }
 
@@ -562,7 +570,20 @@ async function startApp() {
         }
     });
 
-    logoutBtn.addEventListener('click', () => {
+    // --- Меню пользователя ---
+    userMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userMenuDropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!userMenuBtn.contains(e.target) && !userMenuDropdown.contains(e.target)) {
+            userMenuDropdown.classList.remove('open');
+        }
+    });
+
+    menuLogoutBtn.addEventListener('click', () => {
+        userMenuDropdown.classList.remove('open');
         auth.signOut();
     });
 
