@@ -1,4 +1,3 @@
-console.log('script.js загружен и выполняется');
 // Глобальные переменные
 let db, auth;
 let currentUser = null;
@@ -123,13 +122,13 @@ async function loadData() {
     }
 }
 
-// --- Подписка на корзину в Firestore ---
+// --- Подписка на корзину в Firestore (compat) ---
 function subscribeCart() {
     if (cartUnsubscribe) cartUnsubscribe();
     if (!db || !currentUser) return;
-    const cartDoc = doc(db, 'carts', currentUser.uid);
-    cartUnsubscribe = onSnapshot(cartDoc, (docSnap) => {
-        if (docSnap.exists()) {
+    const cartDocRef = db.collection('carts').doc(currentUser.uid);
+    cartUnsubscribe = cartDocRef.onSnapshot((docSnap) => {
+        if (docSnap.exists) {
             cart = docSnap.data().items || {};
         } else {
             cart = {};
@@ -141,8 +140,8 @@ function subscribeCart() {
 
 async function saveCart() {
     if (!db || !currentUser) return;
-    const cartDoc = doc(db, 'carts', currentUser.uid);
-    await setDoc(cartDoc, { items: cart }, { merge: true });
+    const cartDocRef = db.collection('carts').doc(currentUser.uid);
+    await cartDocRef.set({ items: cart }, { merge: true });
 }
 
 // --- Отрисовка поставщиков ---
@@ -182,7 +181,7 @@ function deselectSupplier() {
     searchInput.focus();
 }
 
-// --- Поиск и отрисовка товаров ---
+// --- Поиск и отрисовка товаров (без изменений) ---
 function filterAndRenderProducts() {
     const query = searchInput.value.trim().toLowerCase();
     if (!activeSupplierId && !query) {
@@ -284,7 +283,7 @@ function showWelcomeMessage() {
     productListEl.classList.add('welcome-message');
 }
 
-// --- Корзина ---
+// --- Корзина (без изменений, кроме вызовов saveCart) ---
 function addToCart(supplierId, productId) {
     const supplier = suppliers.find(s => s.id == supplierId);
     if (!supplier) return;
@@ -431,14 +430,14 @@ function closeFullscreen() {
     overlayDiv.style.display = 'none';
 }
 
-// --- Отправка заказа ---
+// --- Отправка заказа (compat) ---
 async function submitOrder() {
     if (Object.keys(cart).length === 0) {
         alert('Корзина пуста');
         return;
     }
-    const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-    const userName = userDoc.exists() ? userDoc.data().name : 'Неизвестный';
+    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    const userName = userDoc.exists ? userDoc.data().name : 'Неизвестный';
     const orderData = {
         userId: currentUser.uid,
         userName: userName,
@@ -446,10 +445,10 @@ async function submitOrder() {
         cart: cart,
         total: calculateTotal()
     };
-    await addDoc(collection(db, 'orders'), orderData);
+    await db.collection('orders').add(orderData);
     generateMessagesFromCart(cart, userName);
     cart = {};
-    await setDoc(doc(db, 'carts', currentUser.uid), { items: {} });
+    await db.collection('carts').doc(currentUser.uid).set({ items: {} });
     showNotification('✅ Заказ отправлен');
     openFullscreen();
 }
@@ -521,7 +520,7 @@ async function startApp() {
 
     loginBtn.addEventListener('click', async () => {
         try {
-            await signInWithEmailAndPassword(auth, loginEmail.value.trim(), loginPass.value);
+            await auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPass.value);
         } catch (err) {
             authError.textContent = 'Ошибка входа: ' + err.message;
         }
@@ -533,8 +532,8 @@ async function startApp() {
         const pass = regPass.value;
         if (!name) { regError.textContent = 'Введите имя'; return; }
         try {
-            const cred = await createUserWithEmailAndPassword(auth, email, pass);
-            await setDoc(doc(db, 'users', cred.user.uid), {
+            const cred = await auth.createUserWithEmailAndPassword(email, pass);
+            await db.collection('users').doc(cred.user.uid).set({
                 name: name,
                 role: 'сотрудник'
             });
@@ -543,11 +542,11 @@ async function startApp() {
         }
     });
 
-    onAuthStateChanged(auth, async (user) => {
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
                 currentUserRole = userDoc.data().role || 'сотрудник';
                 window.currentUserRole = currentUserRole;
             }
@@ -563,7 +562,7 @@ async function startApp() {
     });
 
     logoutBtn.addEventListener('click', () => {
-        signOut(auth);
+        auth.signOut();
     });
 
     // Обработчики поиска
@@ -591,7 +590,7 @@ async function startApp() {
     });
     cartCloseBtn.addEventListener('click', closeFullscreen);
 
-    // Загружаем каталог сразу после готовности Firebase, чтобы индикатор исчез до авторизации
+    // Загружаем каталог сразу
     await loadData();
     console.log('startApp завершена');
 }
@@ -602,7 +601,7 @@ async function initApp() {
     registerSW();
 }
 
-// Функция, которая запускает всё после готовности Firebase
+// --- Запуск ---
 function onFirebaseReady() {
     console.log('onFirebaseReady вызвана');
     startApp().catch(err => {
@@ -612,7 +611,6 @@ function onFirebaseReady() {
     });
 }
 
-// Если Firebase уже инициализирован (глобальные переменные доступны), запускаемся сразу
 if (window.db && window.auth) {
     console.log('Firebase уже готов, запускаем onFirebaseReady');
     onFirebaseReady();
