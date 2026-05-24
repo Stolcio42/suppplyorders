@@ -536,7 +536,8 @@ async function startApp() {
             regError.textContent = 'Ошибка регистрации: ' + err.message;
         }
     });
-
+    // Загружаем каталог до проверки авторизации, чтобы индикатор погас
+    await loadData();
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             currentUser = user;
@@ -587,7 +588,6 @@ async function startApp() {
 }
 
 async function initApp() {
-    await loadData();
     subscribeCart();
     initTheme();
     registerSW();
