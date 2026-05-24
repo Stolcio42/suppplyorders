@@ -1,11 +1,11 @@
-// Глобальные переменные (будут установлены после инициализации Firebase)
+// Глобальные переменные
 let db, auth;
 let currentUser = null;
-let currentUserRole = 'сотрудник'; // по умолчанию
+let currentUserRole = 'сотрудник';
 let suppliers = [];
-let cart = {};           // локальное представление корзины (синхронизируется с Firestore)
+let cart = {};
 let activeSupplierId = null;
-let cartUnsubscribe = null; // отписка от изменений корзины
+let cartUnsubscribe = null;
 
 // DOM-элементы
 const supplierListEl = document.getElementById('supplier-list');
@@ -23,110 +23,72 @@ const cartPanel = document.getElementById('cart-panel');
 const cartCloseBtn = document.getElementById('cart-close-btn');
 const loadingIndicator = document.getElementById('loading-indicator');
 const notification = document.getElementById('notification');
+const themeToggle = document.getElementById('theme-toggle');
+const logoutBtn = document.getElementById('logout-btn');
+const clearCartBtn = document.getElementById('clear-cart-btn');
 
-// Оверлей для полноэкранного режима
+// Оверлей полноэкранного режима корзины
 let overlayDiv = document.createElement('div');
 overlayDiv.className = 'overlay';
 overlayDiv.style.display = 'none';
 document.body.appendChild(overlayDiv);
 overlayDiv.addEventListener('click', closeFullscreen);
 
-// --- Авторизация Firebase ---
-window.addEventListener('DOMContentLoaded', () => {
-    // Инициализация Firebase уже выполнена в index.html
-    db = window.db;
-    auth = window.auth;
+// --- Утилиты ---
+function escapeHtml(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-    // UI авторизации
-    const authOverlay = document.getElementById('auth-overlay');
-    const loginBtn = document.getElementById('auth-login-btn');
-    const registerBtn = document.getElementById('auth-register-btn');
-    const showRegister = document.getElementById('show-register');
-    const showLogin = document.getElementById('show-login');
-    const authError = document.getElementById('auth-error');
-    const regError = document.getElementById('reg-error');
-    const loginEmail = document.getElementById('auth-email');
-    const loginPass = document.getElementById('auth-password');
-    const regName = document.getElementById('reg-name');
-    const regEmail = document.getElementById('reg-email');
-    const regPass = document.getElementById('reg-password');
-    const registerBox = document.getElementById('register-box');
-    const loginBox = authOverlay.querySelector('.auth-box:first-child');
-    const appDiv = document.getElementById('app');
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-    // Переключение форм
-    showRegister.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginBox.style.display = 'none';
-        registerBox.style.display = '';
+function highlightText(text, query) {
+    if (!query) return text;
+    const escapedQuery = escapeRegex(query);
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+}
+
+function showNotification(message) {
+    if (!notification) return;
+    notification.textContent = message;
+    notification.style.display = 'block';
+    notification.style.animation = 'none';
+    notification.offsetHeight;
+    notification.style.animation = 'fadeInOut 3s ease forwards';
+    setTimeout(() => { notification.style.display = 'none'; }, 3000);
+}
+
+function copyToClipboard(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = 'Скопировано!';
+        setTimeout(() => { btn.textContent = originalText; }, 2000);
+    }).catch(err => {
+        alert('Не удалось скопировать: ' + err);
     });
-    showLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        registerBox.style.display = 'none';
-        loginBox.style.display = '';
-    });
+}
 
-    // Вход
-    loginBtn.addEventListener('click', () => {
-        const email = loginEmail.value.trim();
-        const pass = loginPass.value;
-        signInWithEmailAndPassword(auth, email, pass)
-            .catch(err => authError.textContent = 'Ошибка входа: ' + err.message);
+// --- Тёмная тема ---
+function initTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark.matches)) {
+        document.documentElement.classList.add('dark-theme');
+        themeToggle.textContent = '☀️';
+    } else {
+        themeToggle.textContent = '🌙';
+    }
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark-theme');
+        themeToggle.textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
+}
 
-    // Регистрация
-    registerBtn.addEventListener('click', async () => {
-        const name = regName.value.trim();
-        const email = regEmail.value.trim();
-        const pass = regPass.value;
-        if (!name) { regError.textContent = 'Введите имя'; return; }
-        try {
-            const cred = await createUserWithEmailAndPassword(auth, email, pass);
-            // Создаём профиль в Firestore
-            await setDoc(doc(db, 'users', cred.user.uid), {
-                name: name,
-                role: 'сотрудник' // по умолчанию
-            });
-            // После регистрации сразу входим
-        } catch (err) {
-            regError.textContent = 'Ошибка регистрации: ' + err.message;
-        }
-    });
-
-    // Отслеживание состояния авторизации
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            currentUser = user;
-            // Получаем роль и имя
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
-                currentUserRole = userDoc.data().role || 'сотрудник';
-                window.currentUserRole = currentUserRole;
-            }
-            authOverlay.style.display = 'none';
-            appDiv.style.display = 'block';
-            initApp();
-        } else {
-            currentUser = null;
-            authOverlay.style.display = 'flex';
-            appDiv.style.display = 'none';
-            if (cartUnsubscribe) cartUnsubscribe();
-        }
-    });
-
-    // Выход
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        signOut(auth);
-    });
-});
-
-// Основная инициализация после авторизации
-async function initApp() {
-    await loadData();
-    subscribeCart();
-    // Переключатель темы
-    initTheme();
-    // Service Worker update notification
+// --- Service Worker ---
+function registerSW() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(reg => {
             reg.addEventListener('updatefound', () => {
@@ -146,10 +108,11 @@ async function loadData() {
     loadingIndicator.style.display = 'flex';
     try {
         const resp = await fetch('data.json');
+        if (!resp.ok) throw new Error('Ошибка загрузки');
         suppliers = await resp.json();
         renderSupplierList();
-    } catch(e) {
-        alert('Ошибка загрузки каталога');
+    } catch (e) {
+        alert('Ошибка загрузки каталога: ' + e.message);
     } finally {
         loadingIndicator.style.display = 'none';
     }
@@ -158,6 +121,7 @@ async function loadData() {
 // --- Подписка на корзину в Firestore ---
 function subscribeCart() {
     if (cartUnsubscribe) cartUnsubscribe();
+    if (!db || !currentUser) return;
     const cartDoc = doc(db, 'carts', currentUser.uid);
     cartUnsubscribe = onSnapshot(cartDoc, (docSnap) => {
         if (docSnap.exists()) {
@@ -170,26 +134,153 @@ function subscribeCart() {
     });
 }
 
-// Сохранение корзины (вызывается при каждом изменении)
 async function saveCart() {
-    if (!currentUser) return;
+    if (!db || !currentUser) return;
     const cartDoc = doc(db, 'carts', currentUser.uid);
     await setDoc(cartDoc, { items: cart }, { merge: true });
 }
 
-// --- Старые функции отрисовки (почти без изменений) ---
-function renderSupplierList() { /* без изменений */ }
-function selectSupplier(id) { /* без изменений */ }
-function deselectSupplier() { /* без изменений */ }
-function filterAndRenderProducts() { /* без изменений */ }
-function buildProductCard(supplierId, prod, query) { /* без изменений */ }
-function highlightText(text, query) { /* без изменений */ }
-function escapeHtml(text) { /* без изменений */ }
-function showWelcomeMessage() { /* без изменений */ }
+// --- Отрисовка поставщиков ---
+function renderSupplierList() {
+    supplierListEl.innerHTML = '';
+    suppliers.forEach(supplier => {
+        const li = document.createElement('li');
+        li.textContent = supplier.name;
+        li.dataset.id = supplier.id;
+        li.addEventListener('click', () => {
+            if (activeSupplierId === supplier.id) {
+                deselectSupplier();
+            } else {
+                selectSupplier(supplier.id);
+            }
+        });
+        if (supplier.id === activeSupplierId) li.classList.add('active');
+        supplierListEl.appendChild(li);
+    });
+}
 
-// --- Корзина (изменения: вызов saveCart) ---
+function selectSupplier(id) {
+    activeSupplierId = id;
+    document.querySelectorAll('#supplier-list li').forEach(li => {
+        li.classList.toggle('active', li.dataset.id == id);
+    });
+    searchInput.placeholder = '🔍 Поиск по товарам поставщика...';
+    filterAndRenderProducts();
+    searchInput.focus();
+}
+
+function deselectSupplier() {
+    activeSupplierId = null;
+    document.querySelectorAll('#supplier-list li').forEach(li => li.classList.remove('active'));
+    searchInput.placeholder = '🔍 Поиск по всем товарам...';
+    filterAndRenderProducts();
+    searchInput.focus();
+}
+
+// --- Поиск и отрисовка товаров ---
+function filterAndRenderProducts() {
+    const query = searchInput.value.trim().toLowerCase();
+    if (!activeSupplierId && !query) {
+        showWelcomeMessage();
+        return;
+    }
+    productListEl.classList.remove('welcome-message');
+
+    if (!activeSupplierId) {
+        const allResults = [];
+        suppliers.forEach(supplier => {
+            if (!supplier.products) return;
+            const matching = supplier.products.filter(prod => {
+                const nameMatch = prod.name.toLowerCase().includes(query);
+                const articleMatch = prod.article && prod.article.toLowerCase().includes(query);
+                return nameMatch || articleMatch;
+            });
+            if (matching.length > 0) {
+                allResults.push({
+                    supplierId: supplier.id,
+                    supplierName: supplier.name,
+                    products: matching
+                });
+            }
+        });
+        if (allResults.length === 0) {
+            productListEl.innerHTML = '<p>Ничего не найдено</p>';
+            return;
+        }
+        let html = '';
+        allResults.forEach(group => {
+            html += `<div class="search-supplier-header">${escapeHtml(group.supplierName)}</div>`;
+            group.products.forEach(prod => html += buildProductCard(group.supplierId, prod, query));
+        });
+        productListEl.innerHTML = html;
+        return;
+    }
+
+    const supplier = suppliers.find(s => s.id == activeSupplierId);
+    if (!supplier) { productListEl.innerHTML = '<p>Поставщик не найден</p>'; return; }
+    if (!supplier.products || supplier.products.length === 0) {
+        productListEl.innerHTML = '<p>Нет товаров</p>';
+        return;
+    }
+    let filtered = supplier.products;
+    if (query) {
+        filtered = supplier.products.filter(prod => {
+            const nameMatch = prod.name.toLowerCase().includes(query);
+            const articleMatch = prod.article && prod.article.toLowerCase().includes(query);
+            return nameMatch || articleMatch;
+        });
+    }
+    if (filtered.length === 0) {
+        productListEl.innerHTML = '<p>Ничего не найдено</p>';
+        return;
+    }
+    let html = '';
+    filtered.forEach(prod => html += buildProductCard(supplier.id, prod, query));
+    productListEl.innerHTML = html;
+}
+
+function buildProductCard(supplierId, prod, searchQuery = '') {
+    const imgSrc = prod.image ? escapeHtml(prod.image) : null;
+    const highlightedName = highlightText(escapeHtml(prod.name), searchQuery);
+    const highlightedArticle = prod.article ? highlightText(escapeHtml(prod.article), searchQuery) : '';
+    return `
+        <div class="product-card">
+            <div class="product-image">
+                ${imgSrc
+                    ? `<img src="${imgSrc}" alt="${escapeHtml(prod.name)}" loading="lazy">`
+                    : `<div class="no-image">📷</div>`
+                }
+            </div>
+            <div class="info">
+                <div class="name">${highlightedName}</div>
+                ${highlightedArticle ? `<div class="article">Арт. ${highlightedArticle}</div>` : ''}
+                ${prod.unit ? `<div class="unit">${escapeHtml(prod.unit)}</div>` : ''}
+                ${prod.price ? `<div class="price">${prod.price.toFixed(2)} руб.</div>` : ''}
+            </div>
+            <button onclick="addToCart(${supplierId}, ${prod.id})">В корзину</button>
+        </div>
+    `;
+}
+
+function showWelcomeMessage() {
+    productListEl.innerHTML = `
+        <div class="welcome-content">
+            <h2>👋 Добро пожаловать в систему заявок</h2>
+            <ol>
+                <li><strong>Выберите поставщика</strong> в левой панели</li>
+                <li><strong>Добавьте товары</strong> в корзину, нажимая кнопку «В корзину»</li>
+                <li>В корзине <strong>измените количество</strong> или удалите позиции</li>
+                <li>Когда всё готово — нажмите <strong>«Отправить заказ»</strong></li>
+                <li>После отправки заказ попадёт в историю и статистику</li>
+            </ol>
+            <p class="welcome-hint">Корзина сохраняется автоматически. История доступна по кнопке в шапке.</p>
+        </div>
+    `;
+    productListEl.classList.add('welcome-message');
+}
+
+// --- Корзина ---
 function addToCart(supplierId, productId) {
-    // ... та же логика, но после изменения cart вызываем saveCart()
     const supplier = suppliers.find(s => s.id == supplierId);
     if (!supplier) return;
     const product = supplier.products.find(p => p.id == productId);
@@ -197,18 +288,143 @@ function addToCart(supplierId, productId) {
     if (!cart[supplierId]) cart[supplierId] = [];
     const existing = cart[supplierId].find(i => i.id === productId);
     if (existing) {
-        if (existing.qty < 20) existing.qty += 1;
-        else { alert('Лимит 20'); return; }
+        if (existing.qty < 20) {
+            existing.qty += 1;
+        } else {
+            alert('Достигнут лимит (20 шт.) для этого товара');
+            return;
+        }
     } else {
-        cart[supplierId].push({...product, supplierName: supplier.name, qty: 1});
+        cart[supplierId].push({ ...product, supplierName: supplier.name, qty: 1 });
     }
     saveCart();
-    // UI обновится через подписку
 }
 
-function changeQty(supplierId, productId, delta) { /* аналогично с saveCart */ }
-function removeFromCart(supplierId, productId) { /* аналогично с saveCart */ }
-function clearCart() { /* аналогично с saveCart */ }
+function changeQty(supplierId, productId, delta) {
+    if (!cart[supplierId]) return;
+    const item = cart[supplierId].find(i => i.id == productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) {
+        cart[supplierId] = cart[supplierId].filter(i => i.id !== productId);
+        if (cart[supplierId].length === 0) delete cart[supplierId];
+    } else if (item.qty > 20) {
+        item.qty = 20;
+        alert('Максимальное количество — 20');
+    }
+    saveCart();
+}
+
+function removeFromCart(supplierId, productId) {
+    if (cart[supplierId]) {
+        cart[supplierId] = cart[supplierId].filter(i => i.id != productId);
+        if (cart[supplierId].length === 0) delete cart[supplierId];
+        saveCart();
+    }
+}
+
+function clearCart() {
+    if (Object.keys(cart).length === 0) return;
+    if (!confirm('Очистить корзину?')) return;
+    cart = {};
+    saveCart();
+}
+
+function calculateTotal() {
+    let total = 0;
+    for (const items of Object.values(cart)) {
+        for (const item of items) {
+            if (item.price && typeof item.price === 'number') total += item.price * item.qty;
+        }
+    }
+    return total;
+}
+
+function updateCartToggleCount() {
+    let totalItems = 0;
+    for (const items of Object.values(cart)) {
+        totalItems += items.reduce((sum, item) => sum + item.qty, 0);
+    }
+    cartToggleCount.textContent = totalItems;
+}
+
+function renderCart() {
+    cartContentEl.innerHTML = '';
+    if (Object.keys(cart).length === 0) {
+        cartContentEl.innerHTML = '<p>Корзина пуста</p>';
+        cartTotalEl.textContent = '';
+        return;
+    }
+    for (const [supplierId, items] of Object.entries(cart)) {
+        const supplierName = items[0]?.supplierName || 'Неизвестный поставщик';
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'supplier-cart-group';
+        groupDiv.innerHTML = `<h3>${supplierName}</h3>`;
+        const itemsList = document.createElement('div');
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'cart-item';
+            itemDiv.innerHTML = `
+                <div class="cart-item-row">
+                    <div class="item-info">
+                        <span class="item-name">${escapeHtml(item.name)}</span>
+                        ${item.article ? `<span class="item-article">Арт. ${escapeHtml(item.article)}</span>` : ''}
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-minus" data-supplier="${supplierId}" data-product="${item.id}">−</button>
+                        <span>${item.qty}</span>
+                        <button class="qty-plus" data-supplier="${supplierId}" data-product="${item.id}">+</button>
+                    </div>
+                </div>
+                <div class="cart-item-remove">
+                    <button class="remove-btn" data-supplier="${supplierId}" data-product="${item.id}">Удалить</button>
+                </div>
+            `;
+            itemsList.appendChild(itemDiv);
+        });
+        groupDiv.appendChild(itemsList);
+        cartContentEl.appendChild(groupDiv);
+    }
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sid = e.target.dataset.supplier;
+            const pid = parseInt(e.target.dataset.product);
+            changeQty(sid, pid, -1);
+        });
+    });
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sid = e.target.dataset.supplier;
+            const pid = parseInt(e.target.dataset.product);
+            changeQty(sid, pid, 1);
+        });
+    });
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const sid = e.target.dataset.supplier;
+            const pid = parseInt(e.target.dataset.product);
+            removeFromCart(sid, pid);
+        });
+    });
+    const total = calculateTotal();
+    if (total > 0) {
+        cartTotalEl.textContent = `Итого: ${total.toFixed(2)} руб.`;
+    } else {
+        cartTotalEl.textContent = '';
+    }
+    updateCartToggleCount();
+}
+
+// --- Полноэкранный режим корзины ---
+function openFullscreen() {
+    cartPanel.classList.add('fullscreen');
+    overlayDiv.style.display = 'block';
+}
+
+function closeFullscreen() {
+    cartPanel.classList.remove('fullscreen');
+    overlayDiv.style.display = 'none';
+}
 
 // --- Отправка заказа ---
 async function submitOrder() {
@@ -216,7 +432,6 @@ async function submitOrder() {
         alert('Корзина пуста');
         return;
     }
-    // Получаем имя пользователя
     const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
     const userName = userDoc.exists() ? userDoc.data().name : 'Неизвестный';
     const orderData = {
@@ -227,16 +442,14 @@ async function submitOrder() {
         total: calculateTotal()
     };
     await addDoc(collection(db, 'orders'), orderData);
-    // Очищаем корзину
+    generateMessagesFromCart(cart, userName);
     cart = {};
     await setDoc(doc(db, 'carts', currentUser.uid), { items: {} });
     showNotification('✅ Заказ отправлен');
-    // Генерируем сообщения
-    generateMessagesFromCart(orderData.cart, userName);
     openFullscreen();
 }
 
-// Генерация сообщений (старая логика с подстановкой имени)
+// --- Генерация сообщений ---
 function generateMessages() {
     if (Object.keys(cart).length === 0) {
         messagesOutputEl.innerHTML = '<p>Корзина пуста</p>';
@@ -268,19 +481,123 @@ function generateMessagesFromCart(cartObj, userName) {
     messagesOutputEl.innerHTML = outputHtml;
 }
 
-function calculateTotal() {
-    let total = 0;
-    for (const items of Object.values(cart)) {
-        for (const item of items) {
-            if (item.price) total += item.price * item.qty;
+// --- Главная инициализация после готовности Firebase ---
+async function startApp() {
+    db = window.db;
+    auth = window.auth;
+
+    const authOverlay = document.getElementById('auth-overlay');
+    const appDiv = document.getElementById('app');
+    const loginBtn = document.getElementById('auth-login-btn');
+    const registerBtn = document.getElementById('auth-register-btn');
+    const showRegister = document.getElementById('show-register');
+    const showLogin = document.getElementById('show-login');
+    const loginEmail = document.getElementById('auth-email');
+    const loginPass = document.getElementById('auth-password');
+    const regName = document.getElementById('reg-name');
+    const regEmail = document.getElementById('reg-email');
+    const regPass = document.getElementById('reg-password');
+    const authError = document.getElementById('auth-error');
+    const regError = document.getElementById('reg-error');
+    const registerBox = document.getElementById('register-box');
+    const loginBox = authOverlay.querySelector('.auth-box:first-child');
+
+    showRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginBox.style.display = 'none';
+        registerBox.style.display = '';
+    });
+    showLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        registerBox.style.display = 'none';
+        loginBox.style.display = '';
+    });
+
+    loginBtn.addEventListener('click', async () => {
+        try {
+            await signInWithEmailAndPassword(auth, loginEmail.value.trim(), loginPass.value);
+        } catch (err) {
+            authError.textContent = 'Ошибка входа: ' + err.message;
         }
-    }
-    return total;
+    });
+
+    registerBtn.addEventListener('click', async () => {
+        const name = regName.value.trim();
+        const email = regEmail.value.trim();
+        const pass = regPass.value;
+        if (!name) { regError.textContent = 'Введите имя'; return; }
+        try {
+            const cred = await createUserWithEmailAndPassword(auth, email, pass);
+            await setDoc(doc(db, 'users', cred.user.uid), {
+                name: name,
+                role: 'сотрудник'
+            });
+        } catch (err) {
+            regError.textContent = 'Ошибка регистрации: ' + err.message;
+        }
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser = user;
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+                currentUserRole = userDoc.data().role || 'сотрудник';
+                window.currentUserRole = currentUserRole;
+            }
+            authOverlay.style.display = 'none';
+            appDiv.style.display = 'block';
+            await initApp();
+        } else {
+            currentUser = null;
+            authOverlay.style.display = 'flex';
+            appDiv.style.display = 'none';
+            if (cartUnsubscribe) cartUnsubscribe();
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        signOut(auth);
+    });
+
+    // Обработчики поиска
+    searchInput.addEventListener('input', () => {
+        searchClear.style.display = searchInput.value ? 'block' : 'none';
+        filterAndRenderProducts();
+    });
+    searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        filterAndRenderProducts();
+        searchInput.focus();
+    });
+
+    // Кнопки корзины
+    generateBtn.addEventListener('click', generateMessages);
+    submitOrderBtn.addEventListener('click', submitOrder);
+    clearCartBtn.addEventListener('click', clearCart);
+    cartToggleBtn.addEventListener('click', () => {
+        if (cartPanel.classList.contains('fullscreen')) {
+            closeFullscreen();
+        } else {
+            openFullscreen();
+        }
+    });
+    cartCloseBtn.addEventListener('click', closeFullscreen);
 }
 
-// ... остальные функции (openFullscreen, closeFullscreen, updateCartToggleCount, showNotification, копирование)
-// Добавьте их из предыдущего кода
+async function initApp() {
+    await loadData();
+    subscribeCart();
+    initTheme();
+    registerSW();
+}
 
-// Обработчики кнопок
-document.getElementById('generate-messages').addEventListener('click', generateMessages);
-document.getElementById('submit-order-btn').addEventListener('click', submitOrder);
+// Ждём готовности Firebase
+window.addEventListener('firebase-ready', () => {
+    startApp().catch(err => {
+        console.error(err);
+        loadingIndicator.style.display = 'none';
+        alert('Произошла ошибка инициализации');
+    });
+});
