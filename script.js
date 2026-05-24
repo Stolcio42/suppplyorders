@@ -500,6 +500,7 @@ async function startApp() {
     db = window.db;
     auth = window.auth;
 
+    // Элементы авторизации
     const authOverlay = document.getElementById('auth-overlay');
     const appDiv = document.getElementById('app');
     const loginBtn = document.getElementById('auth-login-btn');
@@ -516,6 +517,7 @@ async function startApp() {
     const registerBox = document.getElementById('register-box');
     const loginBox = authOverlay.querySelector('.auth-box:first-child');
 
+    // Переключение форм
     showRegister.addEventListener('click', (e) => {
         e.preventDefault();
         loginBox.style.display = 'none';
@@ -527,6 +529,7 @@ async function startApp() {
         loginBox.style.display = '';
     });
 
+    // Вход
     loginBtn.addEventListener('click', async () => {
         try {
             await auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPass.value);
@@ -535,6 +538,7 @@ async function startApp() {
         }
     });
 
+    // Регистрация
     registerBtn.addEventListener('click', async () => {
         const name = regName.value.trim();
         const email = regEmail.value.trim();
@@ -551,24 +555,40 @@ async function startApp() {
         }
     });
 
+    // Функция, которая выполняется, когда пользователь авторизован
+    async function onUserLoggedIn(user) {
+        currentUser = user;
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+            currentUserRole = userDoc.data().role || 'сотрудник';
+            window.currentUserRole = currentUserRole;
+        }
+        authOverlay.style.display = 'none';
+        appDiv.style.display = 'block';
+        await initApp();
+    }
+
+    // Функция при выходе
+    function onUserLoggedOut() {
+        currentUser = null;
+        authOverlay.style.display = 'flex';
+        appDiv.style.display = 'none';
+        if (cartUnsubscribe) cartUnsubscribe();
+    }
+
+    // Слушатель изменений авторизации
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            currentUser = user;
-            const userDoc = await db.collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-                currentUserRole = userDoc.data().role || 'сотрудник';
-                window.currentUserRole = currentUserRole;
-            }
-            authOverlay.style.display = 'none';
-            appDiv.style.display = 'block';
-            await initApp();
+            await onUserLoggedIn(user);
         } else {
-            currentUser = null;
-            authOverlay.style.display = 'flex';
-            appDiv.style.display = 'none';
-            if (cartUnsubscribe) cartUnsubscribe();
+            onUserLoggedOut();
         }
     });
+
+    // Мгновенная проверка: если пользователь уже есть (bfcache, повторный вход)
+    if (auth.currentUser) {
+        await onUserLoggedIn(auth.currentUser);
+    }
 
     // --- Меню пользователя ---
     userMenuBtn.addEventListener('click', (e) => {
@@ -599,7 +619,7 @@ async function startApp() {
         searchInput.focus();
     });
 
-    // Единственная кнопка корзины с подтверждением
+    // Кнопка формирования заявки
     generateBtn.addEventListener('click', () => {
         if (Object.keys(cart).length === 0) {
             alert('Корзина пуста');
@@ -619,7 +639,7 @@ async function startApp() {
     });
     cartCloseBtn.addEventListener('click', closeFullscreen);
 
-    // Загружаем каталог (чтобы индикатор исчез, а поставщики отобразились сразу после входа)
+    // Загружаем каталог (поставщики появятся после входа)
     await loadData();
     console.log('startApp завершена');
 }

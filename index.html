@@ -127,7 +127,6 @@
       console.log('Firebase готов (compat)');
       window.dispatchEvent(new Event('firebase-ready'));
 
-      // Убираем проблему с bfcache (возврат назад)
       window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
           // Страница восстановлена из кэша – перезагружаем, чтобы Firebase нормально инициализировался
