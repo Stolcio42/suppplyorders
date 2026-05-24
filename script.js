@@ -93,8 +93,13 @@ function registerSW() {
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
+                    // Как только новый воркер установится и контроллер существует,
+                    // предлагаем обновить страницу автоматически
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        document.getElementById('update-notification').style.display = 'block';
+                        // Отправляем сообщение новому воркеру, чтобы он активировался
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        // Перезагружаем страницу, чтобы применить обновление
+                        window.location.reload();
                     }
                 });
             });
